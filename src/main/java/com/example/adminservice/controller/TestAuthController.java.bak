@@ -1,0 +1,71 @@
+package com.example.adminservice.controller;
+
+import com.example.adminservice.common.BaseResponse;
+import com.example.adminservice.security.JwtConstants;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/test-auth")
+@Tag(name = "테스트 인증 API", description = "관리자 서비스 테스트용 인증 API")
+public class TestAuthController {
+
+    @Operation(summary = "테스트 로그인", description = "데이터베이스 접속 없이 테스트용 JWT 토큰을 발급합니다")
+    @PostMapping("/login")
+    public ResponseEntity<?> testLogin(
+            @RequestParam(defaultValue = "1234") String username,
+            @RequestParam(defaultValue = "1234") String password) {
+        
+        log.info("테스트 로그인 요청: username={}", username);
+        
+        // 기본 인증
+        if (!"1234".equals(password)) {
+            log.warn("테스트 로그인 실패: 잘못된 비밀번호");
+            return ResponseEntity.badRequest().body(
+                BaseResponse.fail("비밀번호가 일치하지 않습니다.", "AUTHENTICATION_FAILED", 400)
+            );
+        }
+        
+        // 토큰 생성
+        Key key = Keys.hmacShaKeyFor(JwtConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+        
+        String accessToken = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + JwtConstants.ACCESS_TOKEN_EXPIRATION))
+                .claim("role", JwtConstants.ROLE_ADMIN)
+                .signWith(key)
+                .compact();
+                
+        String refreshToken = Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + JwtConstants.REFRESH_TOKEN_EXPIRATION))
+                .signWith(key)
+                .compact();
+        
+        // 응답 생성
+        Map<String, Object> tokenData = new HashMap<>();
+        tokenData.put("accessToken", accessToken);
+        tokenData.put("refreshToken", refreshToken);
+        tokenData.put("email", username);
+        
+        log.info("테스트 로그인 성공: username={}", username);
+        return ResponseEntity.ok(BaseResponse.success(tokenData, "테스트 로그인 성공"));
+    }
+}
