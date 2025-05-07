@@ -88,13 +88,14 @@ public class UserManagementController {
                             .build())
                     .collect(Collectors.toList());
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("users", userDTOs);
-            response.put("currentPage", usersPage.getNumber());
-            response.put("totalItems", usersPage.getTotalElements());
-            response.put("totalPages", usersPage.getTotalPages());
-            
-            return ResponseEntity.ok(BaseResponse.success(response, "사용자 목록 조회 성공"));
+            // 페이지네이션 정보를 별도로 반환하는 새로운 응답 객체 사용
+            return ResponseEntity.ok(BaseResponse.successPaged(
+                userDTOs, 
+                "사용자 목록 조회 성공",
+                usersPage.getNumber(),
+                usersPage.getTotalElements(),
+                usersPage.getTotalPages()
+            ));
         } catch (Exception e) {
             log.error("사용자 목록 조회 중 오류: {}", e.getMessage(), e);
             return ResponseEntity.ok(BaseResponse.fail("사용자 목록 조회 실패", "INTERNAL_ERROR", 500));

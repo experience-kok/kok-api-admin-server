@@ -46,6 +46,68 @@ public static class Success<T> {
 }
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "페이지네이션이 포함된 성공 응답")
+public static class PagedSuccess<T> {
+    @Schema(description = "성공 여부", example = "true")
+    private final boolean success = true;
+    
+    @Schema(description = "응답 메시지", example = "요청이 성공적으로 처리되었습니다.")
+    private final String message;
+    
+    @Schema(description = "HTTP 상태 코드", example = "200")
+    private final int status;
+    
+    @Schema(description = "응답 데이터")
+    private final T data;
+    
+    @Schema(description = "현재 페이지 번호", example = "0")
+    private final int currentPage;
+    
+    @Schema(description = "전체 항목 수", example = "45")
+    private final long totalItems;
+    
+    @Schema(description = "전체 페이지 수", example = "5")
+    private final int totalPages;
+
+    private PagedSuccess(String message, int status, T data, int currentPage, long totalItems, int totalPages) {
+        this.message = message;
+        this.status = status;
+        this.data = data;
+        this.currentPage = currentPage;
+        this.totalItems = totalItems;
+        this.totalPages = totalPages;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public T getData() {
+        return data;
+    }
+    
+    public int getCurrentPage() {
+        return currentPage;
+    }
+    
+    public long getTotalItems() {
+        return totalItems;
+    }
+    
+    public int getTotalPages() {
+        return totalPages;
+    }
+}
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "오류 응답")
 public static class Error {
     @Schema(description = "성공 여부", example = "false")
@@ -116,5 +178,19 @@ public static Error fail(String message, int status) {
  */
 public static Error fail(String message, String errorCode, int status) {
     return new Error(message, errorCode, status);
+}
+
+/**
+ * 페이지네이션이 포함된 성공 응답 생성 (200 OK)
+ */
+public static <T> PagedSuccess<T> successPaged(T data, String message, int currentPage, long totalItems, int totalPages) {
+    return new PagedSuccess<>(message, HttpStatus.OK.value(), data, currentPage, totalItems, totalPages);
+}
+
+/**
+ * 페이지네이션이 포함된 성공 응답 생성 (상태 코드 지정)
+ */
+public static <T> PagedSuccess<T> successPaged(T data, String message, int status, int currentPage, long totalItems, int totalPages) {
+    return new PagedSuccess<>(message, status, data, currentPage, totalItems, totalPages);
 }
 }

@@ -48,13 +48,13 @@ public class AdminSwaggerConfig {
     }
 
     private List<Server> getServers() {
-        // 서버 URL 설정
+        // 서버 URL, 컨텍스트 경로가 /admin에서 /admin-api로 변경됨
         Server prodServer = new Server()
-                .url("https://ckok.kr/admin")
+                .url("https://ckok.kr/admin-api")
                 .description("운영 서버");
                 
         Server localServer = new Server()
-                .url("http://localhost:8081")
+                .url("http://localhost:8081/admin-api")
                 .description("로컬 서버");
 
         return Arrays.asList(prodServer, localServer);

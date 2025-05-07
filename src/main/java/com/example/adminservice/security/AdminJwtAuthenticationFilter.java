@@ -34,7 +34,7 @@ public class AdminJwtAuthenticationFilter extends UsernamePasswordAuthentication
     public AdminJwtAuthenticationFilter(AuthenticationManager authenticationManager) {
         this.authenticationManager = authenticationManager;
         // 컨텍스트 경로를 제외한 경로 설정 (/auth/login)
-        // 컨텍스트 경로(/admin)는 자동으로 처리됨
+        // 컨텍스트 경로(/admin-api)는 자동으로 처리됨
         setFilterProcessesUrl("/auth/login");
         log.info("AdminJwtAuthenticationFilter 초기화: 로그인 URL 설정 = /auth/login");
     }
