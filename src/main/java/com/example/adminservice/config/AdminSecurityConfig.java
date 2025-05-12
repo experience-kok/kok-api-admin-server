@@ -71,18 +71,8 @@ public class AdminSecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // 개발용: 평문 비밀번호 사용 (보안 위험이 있으므로 실제 운영 환경에서는 사용하지 마세요)
-        return new PasswordEncoder() {
-            @Override
-            public String encode(CharSequence rawPassword) {
-                return rawPassword.toString();
-            }
-
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                return rawPassword.toString().equals(encodedPassword);
-            }
-        };
+        // BCrypt 해시 알고리즘을 사용하여 안전하게 비밀번호 암호화
+        return new BCryptPasswordEncoder();
     }
 
     @Bean

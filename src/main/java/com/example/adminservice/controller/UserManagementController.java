@@ -165,4 +165,40 @@ public class UserManagementController {
             return ResponseEntity.ok(BaseResponse.fail("사용자 상태 변경 실패: " + e.getMessage(), "USER_UPDATE_ERROR", 500));
         }
     }
+    
+    @Operation(
+        summary = "사용자 삭제", 
+        description = "특정 사용자를 시스템에서 완전히 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        security = { @SecurityRequirement(name = "bearerAuth") }
+    )
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        try {
+            // 사용자 존재 여부 확인
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
+            
+            // 관리자 계정 삭제 방지 로직 (선택적)
+            if ("ADMIN".equals(user.getRole())) {
+                log.warn("관리자 계정 삭제 시도: {}", userId);
+                return ResponseEntity.ok(BaseResponse.fail("관리자 계정은 삭제할 수 없습니다.", "ADMIN_DELETE_FORBIDDEN", 403));
+            }
+            
+            // 사용자 정보 삭제 전 로그 기록
+            log.info("사용자 삭제: id={}, email={}, role={}", user.getId(), user.getEmail(), user.getRole());
+            
+            // 사용자 삭제
+            userRepository.delete(user);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", userId);
+            response.put("email", user.getEmail());
+            response.put("deleted", true);
+            
+            return ResponseEntity.ok(BaseResponse.success(response, "사용자가 성공적으로 삭제되었습니다."));
+        } catch (Exception e) {
+            log.error("사용자 삭제 중 오류: {}", e.getMessage(), e);
+            return ResponseEntity.ok(BaseResponse.fail("사용자 삭제 실패: " + e.getMessage(), "USER_DELETE_ERROR", 500));
+        }
+    }
 }

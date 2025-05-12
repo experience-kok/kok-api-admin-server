@@ -26,7 +26,7 @@ public class AdminSwaggerConfig {
                 .title("CKOK 관리자 서비스 API")
                 .version("v1.0")
                 .description("CKOK 관리자 서비스 API 문서")
-                .contact(new Contact().name("CKOK Admin").url("https://ckok.kr"));
+                .contact(new Contact().name("CKOK Admin").url("https://admin.ckok.kr"));
 
         SecurityScheme securityScheme = new SecurityScheme()
                 .type(SecurityScheme.Type.HTTP)
@@ -50,7 +50,7 @@ public class AdminSwaggerConfig {
     private List<Server> getServers() {
         // 서버 URL, 컨텍스트 경로가 /admin에서 /admin-api로 변경됨
         Server prodServer = new Server()
-                .url("https://ckok.kr/admin-api")
+                .url("https://admin.ckok.kr/admin-api")
                 .description("운영 서버");
                 
         Server localServer = new Server()
