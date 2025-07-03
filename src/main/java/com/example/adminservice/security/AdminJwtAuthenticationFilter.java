@@ -73,7 +73,7 @@ public class AdminJwtAuthenticationFilter extends UsernamePasswordAuthentication
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + JwtConstants.ACCESS_TOKEN_EXPIRATION))
-                .claim("role", JwtConstants.ROLE_ADMIN)
+                .claim("role", "ADMIN")
                 .signWith(key)
                 .compact();
                 

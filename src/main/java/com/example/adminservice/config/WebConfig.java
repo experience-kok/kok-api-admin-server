@@ -14,8 +14,8 @@ public class WebConfig implements WebMvcConfigurer {
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
         "http://localhost:3000",
         "https://localhost:3000",
-        "http://ckok.kr",
-        "https://ckok.kr"
+        "http://chkok.kr",
+        "https://chkok.kr"
     );
     
     @Override

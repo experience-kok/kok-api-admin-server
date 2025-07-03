@@ -1,5 +1,6 @@
 package com.example.adminservice.service;
 
+import com.example.adminservice.constant.UserRole;
 import com.example.adminservice.domain.User;
 import com.example.adminservice.dto.AdminDTO;
 import com.example.adminservice.repository.UserRepository;
@@ -33,19 +34,19 @@ public class AdminService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmailAndRole(username, JwtConstants.ROLE_ADMIN)
+        User user = userRepository.findByEmailAndRole(username, UserRole.ADMIN)
                 .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다: " + username));
         
         return new org.springframework.security.core.userdetails.User(
             user.getEmail(), 
             user.getPassword(), 
-            List.of(new SimpleGrantedAuthority("ROLE_" + JwtConstants.ROLE_ADMIN))
+            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
     }
 
     @Transactional
     public AdminDTO getAdminByEmail(String email) {
-        User user = userRepository.findByEmailAndRole(email, JwtConstants.ROLE_ADMIN)
+        User user = userRepository.findByEmailAndRole(email, UserRole.ADMIN)
                 .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다: " + email));
         
         return toDTO(user);
@@ -53,7 +54,7 @@ public class AdminService implements UserDetailsService {
 
     @Transactional
     public void updateLastLogin(String email) {
-        User user = userRepository.findByEmailAndRole(email, JwtConstants.ROLE_ADMIN)
+        User user = userRepository.findByEmailAndRole(email, UserRole.ADMIN)
                 .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다: " + email));
         
         user.setUpdatedAt(LocalDateTime.now());
@@ -86,7 +87,7 @@ public class AdminService implements UserDetailsService {
                 .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + JwtConstants.ACCESS_TOKEN_EXPIRATION))
-                .claim("role", JwtConstants.ROLE_ADMIN)
+                .claim("role", "ADMIN")
                 .signWith(key)
                 .compact();
     }

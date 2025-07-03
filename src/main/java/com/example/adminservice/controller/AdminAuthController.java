@@ -5,7 +5,7 @@ import com.example.adminservice.dto.AdminDTO;
 import com.example.adminservice.dto.RefreshTokenRequest;
 import com.example.adminservice.exception.TokenRefreshException;
 import com.example.adminservice.repository.UserRepository;
-import com.example.adminservice.security.JwtConstants;
+import com.example.adminservice.constant.UserRole;
 import com.example.adminservice.security.JwtUtil;
 import com.example.adminservice.service.AdminService;
 import io.jsonwebtoken.Claims;
@@ -26,14 +26,29 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "관리자 인증 API", description = "관리자 로그인 및 인증 관련 API")
+@Tag(name = "관리자 인증 API", description = "🔐 관리자 로그인, 토큰 갱신, 현재 사용자 정보 조회 등 인증 관련 API")
 public class AdminAuthController {
 
     private final AdminService adminService;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    @Operation(summary = "현재 로그인한 관리자 정보 조회", description = "현재 인증된 관리자의 정보를 반환합니다.")
+    @Operation(
+        summary = "현재 로그인한 관리자 정보 조회", 
+        description = """
+            현재 JWT 토큰으로 인증된 관리자의 상세 정보를 반환합니다.
+            
+            ### 응답 정보
+            - 관리자 ID, 이메일, 닉네임
+            - 마지막 로그인 시간
+            - 계정 생성일
+            
+            ### 주의사항
+            - 유효한 JWT 토큰이 필요합니다
+            - 관리자 권한(ADMIN)이 있는 계정만 접근 가능합니다
+            """,
+        tags = {"관리자 인증 API"}
+    )
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentAdmin(java.security.Principal principal) {
         if (principal == null) {
@@ -53,7 +68,39 @@ public class AdminAuthController {
         }
     }
     
-    @Operation(summary = "토큰 재발급", description = "Refresh 토큰을 사용하여 새로운 Access 토큰을 발급합니다.")
+    @Operation(
+        summary = "JWT 토큰 재발급", 
+        description = """
+            Refresh 토큰을 사용하여 새로운 Access 토큰을 발급받습니다.
+            
+            ### 사용 시기
+            - Access 토큰이 만료되었을 때
+            - 토큰 갱신이 필요할 때
+            
+            ### 요청 형식
+            ```json
+            {
+              "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+            }
+            ```
+            
+            ### 응답 형식
+            ```json
+            {
+              "success": true,
+              "message": "토큰이 갱신되었습니다.",
+              "data": {
+                "accessToken": "새로운_액세스_토큰"
+              }
+            }
+            ```
+            
+            ### 주의사항
+            - Refresh 토큰이 유효해야 합니다
+            - 만료된 Refresh 토큰은 사용할 수 없습니다
+            """,
+        tags = {"관리자 인증 API"}
+    )
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
         try {
@@ -69,7 +116,7 @@ public class AdminAuthController {
             String email = claims.getSubject();
             
             // 관리자 권한 확인
-            userRepository.findByEmailAndRole(email, JwtConstants.ROLE_ADMIN)
+            userRepository.findByEmailAndRole(email, UserRole.ADMIN)
                     .orElseThrow(() -> new UsernameNotFoundException("관리자를 찾을 수 없습니다: " + email));
             
             // 새 Access 토큰 발급

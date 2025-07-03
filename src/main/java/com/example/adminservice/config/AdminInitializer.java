@@ -1,8 +1,10 @@
 package com.example.adminservice.config;
 
+import com.example.adminservice.constant.AccountType;
+import com.example.adminservice.constant.Provider;
+import com.example.adminservice.constant.UserRole;
 import com.example.adminservice.domain.User;
 import com.example.adminservice.repository.UserRepository;
-import com.example.adminservice.security.JwtConstants;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +38,7 @@ public class AdminInitializer {
     }
 
     private void createDefaultAdminIfNotExists() {
-        Optional<User> existingAdmin = userRepository.findByEmailAndRole(adminEmail, JwtConstants.ROLE_ADMIN);
+        Optional<User> existingAdmin = userRepository.findByEmailAndRole(adminEmail, UserRole.ADMIN);
 
         if (existingAdmin.isPresent()) {
             log.info("기존 관리자 계정이 존재합니다. email={}", adminEmail);
@@ -49,15 +51,13 @@ public class AdminInitializer {
                 .email(adminEmail)
                 .password(passwordEncoder.encode(adminPassword)) // BCrypt로 해시된 비밀번호 저장
                 .nickname(adminName)
-                .role(JwtConstants.ROLE_ADMIN)
+                .role(UserRole.ADMIN)
                 .active(true)
                 .emailVerified(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 // 필수 필드 추가
-                .provider("local")
+                .provider(Provider.LOCAL.getValue())
                 .socialId("admin_" + adminEmail)
-                .accountType("LOCAL")
+                .accountType(AccountType.LOCAL)
                 .build();
 
         userRepository.save(admin);

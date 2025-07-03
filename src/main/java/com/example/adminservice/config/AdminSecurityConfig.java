@@ -27,12 +27,13 @@ import java.util.List;
 @Order(1)
 public class AdminSecurityConfig {
 
-    // 허용할 오리진 목록을 상수로 정의
+    // 서버 URL 설정
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
         "http://localhost:3000",
         "https://localhost:3000",
-        "http://ckok.kr",
-        "https://ckok.kr"
+        "http://chkok.kr",
+        "https://chkok.kr",
+        "https://www.chkok.kr"
     );
 
     @Bean
@@ -60,6 +61,8 @@ public class AdminSecurityConfig {
                     .requestMatchers("/auth/refresh").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                     .requestMatchers("/*.html", "/static/**").permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().hasRole("ADMIN");
             })
             .addFilter(authenticationFilter)
@@ -78,11 +81,23 @@ public class AdminSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(ALLOWED_ORIGINS);
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        
+        // 개발/운영 환경 모든 오리진 허용 (실제 운영에서는 특정 도메인만 허용)
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        
+        // 모든 HTTP 메서드 허용
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        // 모든 헤더 허용
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // 인증 정보 포함 허용
         configuration.setAllowCredentials(true);
+        
+        // 노출할 헤더
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        
+        // 프리플라이트 요청 캐시 시간 (1시간)
         configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

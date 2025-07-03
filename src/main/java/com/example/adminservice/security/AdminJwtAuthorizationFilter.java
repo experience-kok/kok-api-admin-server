@@ -72,7 +72,7 @@ public class AdminJwtAuthorizationFilter extends BasicAuthenticationFilter {
                 return new UsernamePasswordAuthenticationToken(
                     username, 
                     null, 
-                    List.of(new SimpleGrantedAuthority("ROLE_" + JwtConstants.ROLE_ADMIN))
+                    List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
                 );
             }
             return null;

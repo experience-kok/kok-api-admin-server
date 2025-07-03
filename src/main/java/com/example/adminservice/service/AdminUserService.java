@@ -1,5 +1,6 @@
 package com.example.adminservice.service;
 
+import com.example.adminservice.constant.UserRole;
 import com.example.adminservice.domain.User;
 import com.example.adminservice.dto.AdminUserDTO;
 import com.example.adminservice.repository.UserRepository;
@@ -52,7 +53,7 @@ public class AdminUserService {
     @Transactional(readOnly = true)
     public Optional<AdminUserDTO> getAdminByEmail(String email) {
         return userRepository.findByEmail(email)
-                .filter(user -> "ADMIN".equals(user.getRole()))
+                .filter(user -> UserRole.ADMIN.equals(user.getRole()))
                 .map(this::convertToDto);
     }
 
@@ -84,10 +85,10 @@ public class AdminUserService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getNickname())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .active(user.getActive())
                 .provider(user.getProvider())
-                .accountType(user.getAccountType())
+                .accountType(user.getAccountType().name())
                 .emailVerified(user.getEmailVerified())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

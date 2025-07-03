@@ -4,9 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum UserRole {
-    USER("user"),
-    CLIENT("client"),
-    ADMIN("admin");
+    USER("USER"),
+    CLIENT("CLIENT"),
+    ADMIN("ADMIN");
 
     private final String value;
 
@@ -16,7 +16,7 @@ public enum UserRole {
 
     public static UserRole fromValue(String value) {
         for (UserRole role : UserRole.values()) {
-            if (role.value.equals(value)) {
+            if (role.value.equals(value.toUpperCase())) {
                 return role;
             }
         }
