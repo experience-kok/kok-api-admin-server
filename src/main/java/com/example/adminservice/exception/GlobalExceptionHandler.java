@@ -43,6 +43,12 @@ public class GlobalExceptionHandler {
         return unauthorized(ex.getMessage(), "UNAUTHORIZED");
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<?> handleAuthentication(AuthenticationException ex) {
+        log.warn("인증 실패: {}", ex.getMessage());
+        return unauthorized(ex.getMessage(), "AUTHENTICATION_FAILED");
+    }
+
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<?> handleExpired(ExpiredJwtException ex) {
         log.warn("토큰 만료: {}", ex.getMessage());

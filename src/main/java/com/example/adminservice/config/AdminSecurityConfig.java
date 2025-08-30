@@ -60,7 +60,8 @@ public class AdminSecurityConfig {
                     .requestMatchers("/auth/login").permitAll()
                     .requestMatchers("/auth/refresh").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                    .requestMatchers("/*.html", "/static/**").permitAll()
+                    .requestMatchers("/*.html", "/static/**").permitAll() 
+                    .requestMatchers("/images/**").permitAll() // placeholder 이미지
                     .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().hasRole("ADMIN");

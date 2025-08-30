@@ -95,7 +95,6 @@ public class AdminService implements UserDetailsService {
     private AdminDTO toDTO(User user) {
         return AdminDTO.builder()
                 .id(user.getId())
-                .username(user.getEmail())
                 .name(user.getNickname())
                 .email(user.getEmail())
                 .lastLoginAt(user.getUpdatedAt())

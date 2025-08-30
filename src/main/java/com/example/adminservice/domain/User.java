@@ -69,6 +69,9 @@ public class User {
     @Builder.Default
     private UserRole role = UserRole.USER;
     
+    @Column(name = "memo", columnDefinition = "TEXT")
+    private String memo;
+    
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

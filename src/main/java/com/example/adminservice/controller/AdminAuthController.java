@@ -10,6 +10,11 @@ import com.example.adminservice.security.JwtUtil;
 import com.example.adminservice.service.AdminService;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +31,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "관리자 인증 API", description = "🔐 관리자 로그인, 토큰 갱신, 현재 사용자 정보 조회 등 인증 관련 API")
+@Tag(name = "관리자 인증 API", description = "관리자 로그인, 토큰 갱신, 현재 사용자 정보 조회 등 인증 관련 API")
 public class AdminAuthController {
 
     private final AdminService adminService;
@@ -47,8 +52,153 @@ public class AdminAuthController {
             - 유효한 JWT 토큰이 필요합니다
             - 관리자 권한(ADMIN)이 있는 계정만 접근 가능합니다
             """,
-        tags = {"관리자 인증 API"}
+        security = { @SecurityRequirement(name = "bearerAuth") }
     )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "관리자 정보 조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "성공",
+                                    summary = "현재 로그인한 관리자 정보",
+                                    value = """
+                                    {
+                                      "success": true,
+                                      "message": "관리자 정보 조회 성공",
+                                      "status": 200,
+                                      "data": {
+                                        "id": 3,
+                                        "email": "admin1234@example.com",
+                                        "name": "관리자",
+                                        "email": "admin1234@example.com",
+                                        "lastLoginAt": "2025-08-18T16:18:50.014456",
+                                        "createdAt": "2025-08-03T17:41:24.816406",
+                                        "profileImg": null
+                                      }
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "토큰 없음",
+                                            summary = "Authorization 헤더가 없는 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "인증된 관리자가 없습니다",
+                                              "errorCode": "UNAUTHORIZED",
+                                              "status": 401
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "토큰 만료",
+                                            summary = "JWT 토큰이 만료된 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "토큰이 만료되었습니다. 다시 로그인 해주세요",
+                                              "errorCode": "TOKEN_EXPIRED",
+                                              "status": 401
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "유효하지 않은 토큰",
+                                            summary = "잘못된 형식의 JWT 토큰인 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "유효하지 않은 토큰입니다",
+                                              "errorCode": "INVALID_TOKEN",
+                                              "status": 401
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "권한 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "관리자 권한 없음",
+                                    summary = "ADMIN 권한이 없는 사용자가 접근한 경우",
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "관리자 권한이 필요합니다. 현재 권한: USER",
+                                      "errorCode": "FORBIDDEN",
+                                      "status": 403
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "관리자를 찾을 수 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "관리자 정보 없음",
+                                    summary = "토큰에 포함된 관리자 정보가 DB에 없는 경우",
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "관리자 정보를 찾을 수 없습니다",
+                                      "errorCode": "NOT_FOUND",
+                                      "status": 404
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "데이터베이스 오류",
+                                            summary = "데이터베이스 연결 문제가 발생한 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "관리자 정보 조회 실패: 데이터베이스 연결 오류",
+                                              "errorCode": "INTERNAL_ERROR",
+                                              "status": 500
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "시스템 오류",
+                                            summary = "예상치 못한 시스템 오류가 발생한 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "관리자 정보 조회 실패: 시스템 오류가 발생했습니다",
+                                              "errorCode": "INTERNAL_ERROR",
+                                              "status": 500
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            )
+    })
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentAdmin(java.security.Principal principal) {
         if (principal == null) {
@@ -84,23 +234,197 @@ public class AdminAuthController {
             }
             ```
             
-            ### 응답 형식
-            ```json
-            {
-              "success": true,
-              "message": "토큰이 갱신되었습니다.",
-              "data": {
-                "accessToken": "새로운_액세스_토큰"
-              }
-            }
-            ```
-            
             ### 주의사항
             - Refresh 토큰이 유효해야 합니다
             - 만료된 Refresh 토큰은 사용할 수 없습니다
-            """,
-        tags = {"관리자 인증 API"}
+            """
     )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "토큰 재발급 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "성공",
+                                    summary = "새로운 Access 토큰이 발급된 경우",
+                                    value = """
+                                    {
+                                      "success": true,
+                                      "message": "토큰이 갱신되었습니다",
+                                      "status": 200,
+                                      "data": {
+                                        "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTcyMDk2MjAwMCwiZXhwIjoxNzIwOTY1NjAwfQ.newTokenSignature",
+                                        "tokenType": "Bearer",
+                                        "expiresIn": 3600
+                                      }
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "필수 필드 누락",
+                                            summary = "refreshToken 필드가 없는 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "Refresh 토큰은 필수입니다",
+                                              "errorCode": "VALIDATION_ERROR",
+                                              "status": 400
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "잘못된 JSON 형식",
+                                            summary = "요청 본문이 올바른 JSON 형식이 아닌 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "요청 본문이 올바른 JSON 형식이 아닙니다",
+                                              "errorCode": "INVALID_JSON",
+                                              "status": 400
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "유효하지 않은 Refresh 토큰",
+                                            summary = "Refresh 토큰이 유효하지 않은 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "유효하지 않은 Refresh 토큰입니다",
+                                              "errorCode": "INVALID_REFRESH_TOKEN",
+                                              "status": 401
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "만료된 Refresh 토큰",
+                                            summary = "Refresh 토큰이 만료된 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "Refresh 토큰이 만료되었습니다. 다시 로그인 해주세요",
+                                              "errorCode": "REFRESH_TOKEN_EXPIRED",
+                                              "status": 401
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "잘못된 토큰 형식",
+                                            summary = "토큰 형식이 잘못된 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "토큰 형식이 올바르지 않습니다",
+                                              "errorCode": "MALFORMED_TOKEN",
+                                              "status": 401
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "권한 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "관리자 권한 없음",
+                                    summary = "토큰에 포함된 사용자가 관리자가 아닌 경우",
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "관리자 권한이 필요합니다",
+                                      "errorCode": "FORBIDDEN",
+                                      "status": 403
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "사용자를 찾을 수 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "관리자 계정 없음",
+                                    summary = "토큰에 포함된 관리자가 DB에 존재하지 않는 경우",
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "관리자 계정을 찾을 수 없습니다",
+                                      "errorCode": "USER_NOT_FOUND",
+                                      "status": 404
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "토큰 생성 오류",
+                                            summary = "새로운 토큰 생성 중 오류가 발생한 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "토큰 재발급 중 오류가 발생했습니다",
+                                              "errorCode": "TOKEN_GENERATION_ERROR",
+                                              "status": 500
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "데이터베이스 오류",
+                                            summary = "데이터베이스 연결 문제가 발생한 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "토큰 재발급 중 데이터베이스 오류가 발생했습니다",
+                                              "errorCode": "INTERNAL_ERROR",
+                                              "status": 500
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "시스템 오류",
+                                            summary = "예상치 못한 시스템 오류가 발생한 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "토큰 재발급 중 시스템 오류가 발생했습니다",
+                                              "errorCode": "INTERNAL_ERROR",
+                                              "status": 500
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            )
+    })
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody @Valid RefreshTokenRequest request) {
         try {
@@ -124,6 +448,8 @@ public class AdminAuthController {
             
             Map<String, Object> tokenData = new HashMap<>();
             tokenData.put("accessToken", newAccessToken);
+            tokenData.put("tokenType", "Bearer");
+            tokenData.put("expiresIn", 3600); // 1시간
             
             log.info("토큰 재발급 성공: email={}", email);
             return ResponseEntity.ok(BaseResponse.success(tokenData, "토큰이 갱신되었습니다."));

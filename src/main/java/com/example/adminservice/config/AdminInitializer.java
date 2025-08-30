@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -35,6 +39,7 @@ public class AdminInitializer {
     @PostConstruct
     public void init() {
         createDefaultAdminIfNotExists();
+        createUploadDirectories();
     }
 
     private void createDefaultAdminIfNotExists() {
@@ -58,9 +63,31 @@ public class AdminInitializer {
                 .provider(Provider.LOCAL.getValue())
                 .socialId("admin_" + adminEmail)
                 .accountType(AccountType.LOCAL)
+                .gender(null) // gender 필드를 명시적으로 null로 설정
                 .build();
 
         userRepository.save(admin);
         log.info("관리자 계정 생성 완료: id={}, email={}", admin.getId(), admin.getEmail());
+    }
+    
+    private void createUploadDirectories() {
+        try {
+            // 업로드 디렉토리 생성
+            Path uploadDir = Paths.get("uploads");
+            Path bannerDir = Paths.get("uploads/banners");
+            
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+                log.info("업로드 디렉토리 생성: {}", uploadDir.toAbsolutePath());
+            }
+            
+            if (!Files.exists(bannerDir)) {
+                Files.createDirectories(bannerDir);
+                log.info("배너 업로드 디렉토리 생성: {}", bannerDir.toAbsolutePath());
+            }
+            
+        } catch (IOException e) {
+            log.error("업로드 디렉토리 생성 실패", e);
+        }
     }
 }
