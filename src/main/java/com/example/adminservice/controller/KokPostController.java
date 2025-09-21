@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,10 +35,15 @@ public class KokPostController {
     private final AuthUtils authUtils;
 
     @Operation(
-            summary = "체험콕 글 전체 목록 조회",
-            description = "모든 체험콕 글 목록을 조회합니다.\n\n" +
+            summary = "체험콕 글 전체 목록 조회 (페이지네이션)",
+            description = "모든 체험콕 글 목록을 페이지네이션으로 조회합니다.\n\n" +
                     "정렬 옵션:\n" +
-                    "- latest: 최신순 (기본값)\n"
+                    "- latest: 최신순 (기본값)\n" +
+                    "- viewCountDesc: 조회수 높은순\n" +
+                    "- viewCountAsc: 조회수 낮은순\n\n" +
+                    "페이지네이션 파라미터:\n" +
+                    "- page: 페이지 번호 (0부터 시작, 기본값: 0)\n" +
+                    "- size: 페이지 크기 (기본값: 10)"
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -51,33 +58,43 @@ public class KokPostController {
                                               "success": true,
                                               "message": "체험콕 글 목록을 성공적으로 조회했습니다.",
                                               "status": 200,
-                                              "data": [
-                                                {
-                                                  "id": 1,
-                                                  "title": "맛집 체험 후기",
-                                                  "viewCount": 156,
-                                                  "campaignId": 1,
-                                                  "authorId": 1,
-                                                  "authorName": "관리자",
-                                                  "visitInfo": {
-                                                    "contactPhone": "02-1234-5678",
-                                                    "homepage": "https://example.com",
-                                                    "businessAddress": "서울시 강남구 테헤란로",
-                                                    "businessDetailAddress": "123-45 건물 2층",
-                                                    "lat": 37.5665,
-                                                    "lng": 126.9780
-                                                  },
-                                                  "createdAt": "2025-08-26T10:30:00",
-                                                  "updatedAt": "2025-08-26T15:45:00"
+                                              "data": {
+                                                "content": [
+                                                  {
+                                                    "id": 1,
+                                                    "title": "맛집 체험 후기",
+                                                    "viewCount": 156,
+                                                    "campaignId": 1,
+                                                    "authorId": 1,
+                                                    "authorName": "관리자",
+                                                    "visitInfo": {
+                                                      "contactPhone": "02-1234-5678",
+                                                      "homepage": "https://example.com",
+                                                      "businessAddress": "서울시 강남구 테헤란로",
+                                                      "businessDetailAddress": "123-45 건물 2층",
+                                                      "lat": 37.5665,
+                                                      "lng": 126.9780
+                                                    },
+                                                    "createdAt": "2025-08-26T10:30:00",
+                                                    "updatedAt": "2025-08-26T15:45:00"
+                                                  }
+                                                ],
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 5,
+                                                  "totalElements": 50,
+                                                  "first": true,
+                                                  "last": false
                                                 }
-                                              ]
+                                              }
                                             }"""
                             )
                     )
             )
     })
     @GetMapping
-    public ApiResponse<List<KokPostListResponse>> getAllKokPosts(
+    public ApiResponse<PagedResponse<KokPostListResponse>> getAllKokPosts(
             @Parameter(
                     name = "Authorization",
                     description = "Authorization 헤더 (Bearer token)",
@@ -86,12 +103,17 @@ public class KokPostController {
             )
             @RequestHeader("Authorization") String authorization,
             @Parameter(description = "정렬 옵션 (latest: 최신순, viewCountDesc: 조회수 높은순, viewCountAsc: 조회수 낮은순)")
-            @RequestParam(required = false, defaultValue = "latest") String sort
+            @RequestParam(required = false, defaultValue = "latest") String sort,
+            @Parameter(description = "페이지 번호 (0부터 시작)")
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
     ) {
-        log.info("체험콕 글 전체 목록 조회 API 호출 - 정렬: {}", sort);
+        log.info("체험콕 글 전체 목록 조회 API 호출 - 정렬: {}, 페이지: {}, 크기: {}", sort, page, size);
 
         SortOption sortOption = SortOption.fromValue(sort);
-        List<KokPostListResponse> kokPosts = kokPostService.getAllKokPosts(sortOption);
+        Pageable pageable = PageRequest.of(page, size);
+        PagedResponse<KokPostListResponse> kokPosts = kokPostService.getAllKokPosts(sortOption, pageable);
 
         return ApiResponse.success("체험콕 글 목록을 성공적으로 조회했습니다.", kokPosts);
     }
@@ -369,12 +391,15 @@ public class KokPostController {
     }
 
     @Operation(
-            summary = "체험콕 글 제목 검색",
+            summary = "체험콕 글 제목 검색 (페이지네이션)",
             description = "제목으로 체험콕 글을 검색합니다.\n\n" +
                     "정렬 옵션:\n" +
                     "- latest: 최신순 (기본값)\n" +
                     "- viewCountDesc: 조회수 높은순\n" +
-                    "- viewCountAsc: 조회수 낮은순"
+                    "- viewCountAsc: 조회수 낮은순\n\n" +
+                    "페이지네이션 파라미터:\n" +
+                    "- page: 페이지 번호 (0부터 시작, 기본값: 0)\n" +
+                    "- size: 페이지 크기 (기본값: 10)"
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -389,33 +414,43 @@ public class KokPostController {
                                               "success": true,
                                               "message": "체험콕 글 검색을 성공적으로 완료했습니다.",
                                               "status": 200,
-                                              "data": [
-                                                {
-                                                  "id": 1,
-                                                  "title": "맛집 체험 후기",
-                                                  "viewCount": 156,
-                                                  "campaignId": 1,
-                                                  "authorId": 1,
-                                                  "authorName": "관리자",
-                                                  "visitInfo": {
-                                                    "contactPhone": "02-1234-5678",
-                                                    "homepage": "https://example.com",
-                                                    "businessAddress": "서울시 강남구 테헤란로",
-                                                    "businessDetailAddress": "123-45 건물 2층",
-                                                    "lat": 37.5665,
-                                                    "lng": 126.9780
-                                                  },
-                                                  "createdAt": "2025-08-27T10:30:00",
-                                                  "updatedAt": "2025-08-27T15:45:00"
+                                              "data": {
+                                                "content": [
+                                                  {
+                                                    "id": 1,
+                                                    "title": "맛집 체험 후기",
+                                                    "viewCount": 156,
+                                                    "campaignId": 1,
+                                                    "authorId": 1,
+                                                    "authorName": "관리자",
+                                                    "visitInfo": {
+                                                      "contactPhone": "02-1234-5678",
+                                                      "homepage": "https://example.com",
+                                                      "businessAddress": "서울시 강남구 테헤란로",
+                                                      "businessDetailAddress": "123-45 건물 2층",
+                                                      "lat": 37.5665,
+                                                      "lng": 126.9780
+                                                    },
+                                                    "createdAt": "2025-08-27T10:30:00",
+                                                    "updatedAt": "2025-08-27T15:45:00"
+                                                  }
+                                                ],
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 5,
+                                                  "totalElements": 50,
+                                                  "first": true,
+                                                  "last": false
                                                 }
-                                              ]
+                                              }
                                             }"""
                             )
                     )
             )
     })
     @GetMapping("/search")
-    public ApiResponse<List<KokPostListResponse>> searchKokPosts(
+    public ApiResponse<PagedResponse<KokPostListResponse>> searchKokPosts(
             @Parameter(
                     name = "Authorization",
                     description = "Authorization 헤더 (Bearer token)",
@@ -426,12 +461,17 @@ public class KokPostController {
             @Parameter(description = "검색할 제목 키워드")
             @RequestParam String title,
             @Parameter(description = "정렬 옵션 (latest: 최신순, viewCountDesc: 조회수 높은순, viewCountAsc: 조회수 낮은순)")
-            @RequestParam(required = false, defaultValue = "latest") String sort
+            @RequestParam(required = false, defaultValue = "latest") String sort,
+            @Parameter(description = "페이지 번호 (0부터 시작)")
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
     ) {
-        log.info("체험콕 글 제목 검색 API 호출 - 키워드: {}, 정렬: {}", title, sort);
+        log.info("체험콕 글 제목 검색 API 호출 - 키워드: {}, 정렬: {}, 페이지: {}, 크기: {}", title, sort, page, size);
 
         SortOption sortOption = SortOption.fromValue(sort);
-        List<KokPostListResponse> kokPosts = kokPostService.searchKokPostsByTitle(title, sortOption);
+        Pageable pageable = PageRequest.of(page, size);
+        PagedResponse<KokPostListResponse> kokPosts = kokPostService.searchKokPostsByTitle(title, sortOption, pageable);
 
         return ApiResponse.success("체험콕 글 검색을 성공적으로 완료했습니다.", kokPosts);
     }

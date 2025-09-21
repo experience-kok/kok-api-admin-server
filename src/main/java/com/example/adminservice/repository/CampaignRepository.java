@@ -1,6 +1,7 @@
 package com.example.adminservice.repository;
 
 import com.example.adminservice.domain.Campaign;
+import com.example.adminservice.domain.CampaignApplication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -109,4 +110,42 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
             "OR LOWER(company.companyName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "ORDER BY c.createdAt DESC")
     List<Campaign> findByKeywordAll(@Param("keyword") String keyword);
+
+    /**
+     * 특정 생성자의 캠페인 목록 조회 (회사 정보 포함)
+     */
+    @Query("SELECT c FROM Campaign c " +
+           "LEFT JOIN FETCH c.company comp " +
+           "LEFT JOIN FETCH c.approvedBy ab " +
+           "WHERE c.creator.id = :creatorId " +
+           "ORDER BY c.createdAt DESC")
+    Page<Campaign> findByCreatorIdWithCompanyInfo(@Param("creatorId") Long creatorId, Pageable pageable);
+
+    /**
+     * 사용자별 캠페인 승인 상태별 카운트 조회
+     */
+    @Query("SELECT c.approvalStatus, COUNT(c) FROM Campaign c " +
+           "WHERE c.creator.id = :creatorId " +
+           "GROUP BY c.approvalStatus")
+    Object[][] countByCreatorIdGroupByApprovalStatus(@Param("creatorId") Long creatorId);
+
+    /**
+     * 특정 생성자의 특정 상태 캠페인 조회
+     */
+    @Query("SELECT c FROM Campaign c " +
+           "LEFT JOIN FETCH c.company comp " +
+           "LEFT JOIN FETCH c.approvedBy ab " +
+           "WHERE c.creator.id = :creatorId AND c.approvalStatus = :status " +
+           "ORDER BY c.createdAt DESC")
+    Page<Campaign> findByCreatorIdAndApprovalStatus(@Param("creatorId") Long creatorId, 
+                                                   @Param("status") Campaign.ApprovalStatus status, 
+                                                   Pageable pageable);
+
+    /**
+     * 캠페인별 현재 신청자 수 조회
+     */
+    @Query("SELECT ca.campaign.id, COUNT(ca) FROM CampaignApplication ca " +
+           "WHERE ca.campaign.id IN :campaignIds " +
+           "GROUP BY ca.campaign.id")
+    Object[][] countApplicationsByCampaignIds(@Param("campaignIds") List<Long> campaignIds);
 }

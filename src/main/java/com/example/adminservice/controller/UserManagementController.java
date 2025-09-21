@@ -6,14 +6,16 @@ import com.example.adminservice.domain.User;
 import com.example.adminservice.dto.UserDetailDto;
 import com.example.adminservice.dto.UserListResponseDTO;
 import com.example.adminservice.dto.UserMemoUpdateRequest;
-import com.example.adminservice.dto.UserSearchRequestDTO;
+import com.example.adminservice.dto.UserCampaignActivityDto;
 import com.example.adminservice.repository.UserRepository;
 import com.example.adminservice.service.UserManagementService;
+import com.example.adminservice.service.UserCampaignActivityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +39,7 @@ public class UserManagementController {
 
     private final UserRepository userRepository;
     private final UserManagementService userManagementService;
-
+    private final UserCampaignActivityService userCampaignActivityService;
 
     @Operation(
             summary = "사용자 통계 정보 조회",
@@ -56,140 +58,21 @@ public class UserManagementController {
             """,
             security = { @SecurityRequirement(name = "bearerAuth") }
     )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "사용자 통계 조회 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = {
-                                    @ExampleObject(
-                                            name = "일반적인 통계",
-                                            summary = "사용자 현황 통계",
-                                            value = """
-                                            {
-                                              "success": true,
-                                              "message": "사용자 통계 조회 성공",
-                                              "status": 200,
-                                              "data": {
-                                                "totalUsers": 1250,
-                                                "userCount": 1000,
-                                                "clientCount": 245,
-                                                "activeUsers": 1180,
-                                                "inactiveUsers": 70
-                                              }
-                                            }
-                                            """
-                                    ),
-                                    @ExampleObject(
-                                            name = "초기 상태",
-                                            summary = "서비스 초기 단계의 통계",
-                                            value = """
-                                            {
-                                              "success": true,
-                                              "message": "사용자 통계 조회 성공",
-                                              "status": 200,
-                                              "data": {
-                                                "totalUsers": 12,
-                                                "userCount": 7,
-                                                "clientCount": 3,
-                                                "activeUsers": 10,
-                                                "inactiveUsers": 2
-                                              }
-                                            }
-                                            """
-                                    )
-                            }
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "인증 실패",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "토큰 만료",
-                                    summary = "JWT 토큰이 만료된 경우",
-                                    value = """
-                                    {
-                                      "success": false,
-                                      "message": "토큰이 만료되었습니다. 다시 로그인 해주세요",
-                                      "errorCode": "TOKEN_EXPIRED",
-                                      "status": 401
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "권한 없음",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "관리자 권한 없음",
-                                    summary = "ADMIN 권한이 없는 사용자가 접근한 경우",
-                                    value = """
-                                    {
-                                      "success": false,
-                                      "message": "사용자 통계 조회는 관리자만 가능합니다. 현재 권한: CLIENT",
-                                      "errorCode": "FORBIDDEN",
-                                      "status": 403
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "서버 내부 오류",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = {
-                                    @ExampleObject(
-                                            name = "데이터베이스 오류",
-                                            summary = "데이터베이스 연결 문제가 발생한 경우",
-                                            value = """
-                                            {
-                                              "success": false,
-                                              "message": "사용자 통계 조회 실패: 데이터베이스 연결 오류",
-                                              "errorCode": "INTERNAL_ERROR",
-                                              "status": 500
-                                            }
-                                            """
-                                    ),
-                                    @ExampleObject(
-                                            name = "통계 계산 오류",
-                                            summary = "통계 계산 중 오류가 발생한 경우",
-                                            value = """
-                                            {
-                                              "success": false,
-                                              "message": "사용자 통계 조회 실패: 통계 계산 중 오류가 발생했습니다",
-                                              "errorCode": "INTERNAL_ERROR",
-                                              "status": 500
-                                            }
-                                            """
-                                    )
-                            }
-                    )
-            )
-    })
-
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats() {
         try {
-            long totalUsers = userRepository.count();                         // 총 인원수
-            long userCount = userRepository.countByRole(UserRole.USER);       // 유저수 (USER 역할)
-            long clientCount = userRepository.countByRole(UserRole.CLIENT);   // 클라이언트수
+            long totalUsers = userRepository.count();
+            long userCount = userRepository.countByRole(UserRole.USER);
+            long clientCount = userRepository.countByRole(UserRole.CLIENT);
             long activeUsers = userRepository.countByActive(true);
             long inactiveUsers = userRepository.countByActive(false);
 
             Map<String, Object> stats = new HashMap<>();
-            stats.put("totalUsers", totalUsers);         // 총 인원수
-            stats.put("userCount", userCount);           // 유저수 (USER 역할)
-            stats.put("clientCount", clientCount);       // 클라이언트수
-            stats.put("activeUsers", activeUsers);       // 활성 사용자수
-            stats.put("inactiveUsers", inactiveUsers);   // 비활성 사용자수
+            stats.put("totalUsers", totalUsers);
+            stats.put("userCount", userCount);
+            stats.put("clientCount", clientCount);
+            stats.put("activeUsers", activeUsers);
+            stats.put("inactiveUsers", inactiveUsers);
 
             return ResponseEntity.ok(BaseResponse.success(stats, "사용자 통계 조회 성공"));
         } catch (Exception e) {
@@ -217,62 +100,6 @@ public class UserManagementController {
             """,
             security = { @SecurityRequirement(name = "bearerAuth") }
     )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "사용자 목록 조회 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "성공",
-                                    summary = "페이징된 사용자 목록",
-                                    value = """
-                                    {
-                                      "success": true,
-                                      "message": "사용자 목록 조회 성공",
-                                      "status": 200,
-                                      "data": {
-                                        "content": [
-                                          {
-                                            "id": 1,
-                                            "email": "user1@example.com",
-                                            "nickname": "김사용자",
-                                            "role": "USER",
-                                            "provider": "GOOGLE",
-                                            "accountType": "SOCIAL",
-                                            "active": true,
-                                            "emailVerified": true,
-                                            "createdAt": "2025-07-14T10:00:00",
-                                            "updatedAt": "2025-07-14T15:30:00"
-                                          },
-                                          {
-                                            "id": 2,
-                                            "email": "client@example.com",
-                                            "nickname": "이클라이언트",
-                                            "role": "CLIENT",
-                                            "provider": "LOCAL",
-                                            "accountType": "LOCAL",
-                                            "active": true,
-                                            "emailVerified": true,
-                                            "createdAt": "2025-07-13T14:20:00",
-                                            "updatedAt": "2025-07-14T09:15:00"
-                                          }
-                                        ],
-                                        "pagination": {
-                                          "pageNumber": 0,
-                                          "pageSize": 10,
-                                          "totalPages": 125,
-                                          "totalElements": 1250,
-                                          "first": true,
-                                          "last": false
-                                        }
-                                      }
-                                    }
-                                    """
-                            )
-                    )
-            )
-    })
     @GetMapping
     public ResponseEntity<?> getUserList(
             @Parameter(description = "페이지 번호 (0부터 시작)")
@@ -333,45 +160,6 @@ public class UserManagementController {
             """,
             security = { @SecurityRequirement(name = "bearerAuth") }
     )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "사용자 상세 정보 조회 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "성공",
-                                    summary = "사용자 상세 정보",
-                                    value = """
-                                    {
-                                      "success": true,
-                                      "message": "사용자 상세 정보 조회 성공",
-                                      "status": 200,
-                                      "data": {
-                                        "id": 1,
-                                        "email": "user@example.com",
-                                        "nickname": "김사용자",
-                                        "role": "USER",
-                                        "provider": "GOOGLE",
-                                        "accountType": "SOCIAL",
-                                        "active": true,
-                                        "emailVerified": true,
-                                        "gender": "MALE",
-                                        "age": 28,
-                                        "phone": "010-1234-5678",
-                                        "profileImg": "https://example.com/profile/user1.jpg",
-                                        "memo": "VIP 고객, 특별 관리 필요",
-                                        "createdAt": "2025-07-14T10:00:00",
-                                        "updatedAt": "2025-07-14T15:30:00",
-                                        "platforms": null
-                                      }
-                                    }
-                                    """
-                            )
-                    )
-            )
-    })
-
     @GetMapping("/{userId}")
     public ResponseEntity<?> getUserDetail(
             @Parameter(description = "사용자 ID", required = true)
@@ -429,30 +217,6 @@ public class UserManagementController {
             """,
             security = { @SecurityRequirement(name = "bearerAuth") }
     )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "사용자 메모 업데이트 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "메모 업데이트 성공",
-                                    summary = "사용자 메모가 성공적으로 업데이트된 경우",
-                                    value = """
-                                    {
-                                      "success": true,
-                                      "message": "사용자 메모가 업데이트되었습니다",
-                                      "status": 200,
-                                      "data": {
-                                        "userId": 1,
-                                        "memo": "VIP 고객, 특별 관리 필요"                              
-                                      }
-                                    }
-                                    """
-                            )
-                    )
-            )
-    })
     @PutMapping("/{userId}/memo")
     public ResponseEntity<?> updateUserMemo(
             @Parameter(description = "사용자 ID", required = true)
@@ -463,7 +227,6 @@ public class UserManagementController {
         try {
             String memo = request.getMemo();
 
-            // 메모 길이 검증
             if (memo != null && memo.length() > 1000) {
                 return ResponseEntity.ok(BaseResponse.fail("메모는 1000자 이하로 입력해주세요", "INVALID_PARAMETER", 400));
             }
@@ -513,7 +276,6 @@ public class UserManagementController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
 
-            // 현재 상태를 반전
             boolean newStatus = !user.getActive();
             user.setActive(newStatus);
             userRepository.save(user);
@@ -556,25 +318,20 @@ public class UserManagementController {
             @PathVariable Long userId
     ) {
         try {
-            // 사용자 존재 여부 확인
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
 
-            // 현재 롤 확인
             if (!UserRole.USER.equals(user.getRole())) {
                 String message = String.format("USER 롤인 사용자만 CLIENT로 승급할 수 있습니다. 현재 롤: %s", user.getRole().name());
                 return ResponseEntity.ok(BaseResponse.fail(message, "INVALID_ROLE", 400));
             }
 
-            // 롤 변경 전 로그 기록
             log.info("사용자 롤 승급: userId={}, email={}, 이전 롤={}, 새 롤=CLIENT",
                      user.getId(), user.getEmail(), user.getRole().name());
 
-            // USER → CLIENT로 롤 변경
             user.setRole(UserRole.CLIENT);
             userRepository.save(user);
 
-            // 응답 데이터 구성
             Map<String, Object> response = new HashMap<>();
             response.put("userId", user.getId());
             response.put("email", user.getEmail());
@@ -615,20 +372,16 @@ public class UserManagementController {
             @PathVariable Long userId
     ) {
         try {
-            // 사용자 존재 여부 확인
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
 
-            // 관리자 계정 삭제 방지 로직
             if (UserRole.ADMIN.equals(user.getRole())) {
                 log.warn("관리자 계정 삭제 시도: {}", userId);
                 return ResponseEntity.ok(BaseResponse.fail("관리자 계정은 삭제할 수 없습니다.", "ADMIN_DELETE_FORBIDDEN", 403));
             }
 
-            // 사용자 정보 삭제 전 로그 기록
             log.info("사용자 삭제: id={}, email={}, role={}", user.getId(), user.getEmail(), user.getRole());
 
-            // 사용자 삭제
             userRepository.delete(user);
 
             Map<String, Object> response = new HashMap<>();
@@ -643,41 +396,6 @@ public class UserManagementController {
         }
     }
 
-    /**
-     * 사용자 검색 내부 메서드
-     */
-    private Page<UserListResponseDTO> searchUsersInternal(String keyword, int page, int size, String role, Boolean active) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-
-        // 권한 검증
-        UserRole userRole = null;
-        if (role != null && !role.trim().isEmpty()) {
-            try {
-                userRole = UserRole.valueOf(role.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("유효하지 않은 사용자 권한입니다: " + role + ". 사용 가능한 값: USER, CLIENT, ADMIN");
-            }
-        }
-
-        Page<User> usersPage = userRepository.findByKeyword(keyword, userRole, active, pageable);
-
-        List<UserListResponseDTO> userDTOs = usersPage.getContent().stream()
-                .map(user -> UserListResponseDTO.builder()
-                        .id(user.getId())
-                        .email(user.getEmail())
-                        .nickname(user.getNickname())
-                        .role(user.getRole().name())
-                        .provider(user.getProvider())
-                        .accountType(user.getAccountType().name())
-                        .active(user.getActive())
-                        .emailVerified(user.getEmailVerified())
-                        .createdAt(user.getCreatedAt())
-                        .updatedAt(user.getUpdatedAt())
-                        .build())
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(userDTOs, pageable, usersPage.getTotalElements());
-    }
     @Operation(
             summary = "사용자 검색",
             description = """
@@ -700,137 +418,6 @@ public class UserManagementController {
                     """,
             security = {@SecurityRequirement(name = "bearerAuth")}
     )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "사용자 검색 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    name = "검색 성공",
-                                    summary = "키워드 검색 결과",
-                                    value = """
-                                    {
-                                      "success": true,
-                                      "message": "사용자 검색 성공",
-                                      "status": 200,
-                                      "data": {
-                                        "content": [
-                                          {
-                                            "id": 1,
-                                            "email": "kimuser@gmail.com",
-                                            "nickname": "김사용자",
-                                            "role": "USER",
-                                            "provider": "GOOGLE",
-                                            "accountType": "SOCIAL",
-                                            "active": true,
-                                            "emailVerified": true,
-                                            "gender": "MALE",
-                                            "age": 28,
-                                            "phone": "010-1234-5678",
-                                            "profileImg": "https://example.com/profile.jpg",
-                                            "createdAt": "2025-07-14T10:00:00",
-                                            "updatedAt": "2025-07-14T15:30:00"
-                                          },
-                                          {
-                                            "id": 5,
-                                            "email": "kim.client@gmail.com",
-                                            "nickname": "김클라이언트",
-                                            "role": "CLIENT",
-                                            "provider": "GOOGLE",
-                                            "accountType": "SOCIAL",
-                                            "active": true,
-                                            "emailVerified": true,
-                                            "gender": "FEMALE",
-                                            "age": 32,
-                                            "phone": "010-5678-1234",
-                                            "profileImg": "https://example.com/profile2.jpg",
-                                            "createdAt": "2025-07-10T14:20:00",
-                                            "updatedAt": "2025-07-14T11:45:00"
-                                          }
-                                        ],
-                                        "pagination": {
-                                          "pageNumber": 0,
-                                          "pageSize": 10,
-                                          "totalPages": 1,
-                                          "totalElements": 2,
-                                          "first": true,
-                                          "last": true
-                                        }
-                                      }
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "잘못된 요청",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = {
-                                    @ExampleObject(
-                                            name = "키워드 없음",
-                                            summary = "검색 키워드가 없는 경우",
-                                            value = """
-                                            {
-                                              "success": false,
-                                              "message": "검색 키워드는 필수입니다",
-                                              "errorCode": "INVALID_PARAMETER",
-                                              "status": 400
-                                            }
-                                            """
-                                    ),
-                                    @ExampleObject(
-                                            name = "잘못된 권한",
-                                            summary = "유효하지 않은 role 값",
-                                            value = """
-                                            {
-                                              "success": false,
-                                              "message": "유효하지 않은 권한입니다: INVALID_ROLE",
-                                              "errorCode": "INVALID_PARAMETER",
-                                              "status": 400
-                                            }
-                                            """
-                                    )
-                            }
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "401",
-                    description = "인증 실패",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    value = """
-                                    {
-                                      "success": false,
-                                      "message": "인증이 필요합니다",
-                                      "errorCode": "UNAUTHORIZED",
-                                      "status": 401
-                                    }
-                                    """
-                            )
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "권한 없음",
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(
-                                    value = """
-                                    {
-                                      "success": false,
-                                      "message": "관리자 권한이 필요합니다",
-                                      "errorCode": "FORBIDDEN",
-                                      "status": 403
-                                    }
-                                    """
-                            )
-                    )
-            )
-    })
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(
             @Parameter(description = "검색 키워드 (이메일, 닉네임, 전화번호, 메모)", required = true, example = "김")
@@ -845,7 +432,6 @@ public class UserManagementController {
             @RequestParam(required = false) Boolean active
     ) {
         try {
-            // 입력값 검증
             if (keyword == null || keyword.trim().isEmpty()) {
                 return ResponseEntity.ok(BaseResponse.fail(
                         "검색 키워드는 필수입니다",
@@ -870,12 +456,10 @@ public class UserManagementController {
                 ));
             }
 
-            // 검색 실행
             Page<UserListResponseDTO> users = userManagementService.searchUsers(
                     keyword.trim(), page, size, role, active
             );
 
-            // BaseResponse.successPaged 사용 (기존 /users API와 동일)
             return ResponseEntity.ok(BaseResponse.successPaged(
                     users.getContent(),
                     "사용자 검색 성공",
@@ -892,6 +476,230 @@ public class UserManagementController {
             log.error("사용자 검색 중 오류 발생: {}", e.getMessage(), e);
             return ResponseEntity.ok(BaseResponse.fail(
                     "사용자 검색 실패: " + e.getMessage(),
+                    "INTERNAL_ERROR",
+                    500
+            ));
+        }
+    }
+
+    @Operation(
+            summary = "사용자 캠페인 활동 내역 조회",
+            description = """
+            사용자의 캠페인 활동 내역을 조회합니다. 사용자 타입에 따라 다른 응답을 제공합니다.
+            
+            ### USER 타입
+            - 캠페인 신청 내역을 상태별로 제공
+            - 상태: APPLIED(신청), PENDING(선정 대기중), SELECTED(선정), REJECTED(거절), COMPLETED(완료)
+            
+            ### CLIENT 타입  
+            - 생성한 캠페인을 승인 상태별로 제공
+            - 상태: PENDING(대기중), APPROVED(승인됨), REJECTED(거절됨), EXPIRED(만료됨)
+            
+            ### 공통 기능
+            - 페이징 지원 (기본 10개씩)
+            - 상태별 필터링 지원
+            - 최신순 정렬
+            
+            ### 권한
+            - ADMIN 권한 필요
+            """,
+            security = { @SecurityRequirement(name = "bearerAuth") }
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "캠페인 활동 내역 조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UserCampaignActivityDto.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "USER 타입 응답",
+                                            summary = "일반 사용자의 캠페인 신청 내역",
+                                            value = """
+                                            {
+                                              "success": true,
+                                              "message": "사용자 캠페인 활동 내역 조회 성공",
+                                              "status": 200,
+                                              "data": {
+                                                "userId": 1,
+                                                "userRole": "USER",
+                                                "items": [
+                                                  {
+                                                    "id": 101,
+                                                    "title": "카페 방문 체험 캠페인",
+                                                    "company": "스타벅스 코리아",
+                                                    "type": "방문형",
+                                                    "status": "COMPLETED",
+                                                    "statusText": "완료",
+                                                    "createdAt": "2025-07-10T14:30:00",
+                                                    "updatedAt": "2025-07-15T18:00:00",
+                                                    "campaignId": 20,
+                                                    "maxApplicants": 50,
+                                                    "currentApplications": null,
+                                                    "approvedBy": null,
+                                                    "approvalDate": null,
+                                                    "recruitmentPeriod": null
+                                                  }
+                                                ],
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 2,
+                                                  "totalElements": 15,
+                                                  "first": true,
+                                                  "last": false
+                                                }
+                                              }
+                                            }
+                                            """
+                                    ),
+                                    @ExampleObject(
+                                            name = "CLIENT 타입 응답",
+                                            summary = "클라이언트의 생성 캠페인 내역",
+                                            value = """
+                                            {
+                                              "success": true,
+                                              "message": "사용자 캠페인 활동 내역 조회 성공",
+                                              "status": 200,
+                                              "data": {
+                                                "userId": 2,
+                                                "userRole": "CLIENT",
+                                                "items": [
+                                                  {
+                                                    "id": 25,
+                                                    "title": "신상품 리뷰 캠페인",
+                                                    "company": "올리브영",
+                                                    "type": "배송형",
+                                                    "status": "APPROVED",
+                                                    "statusText": "승인됨",
+                                                    "createdAt": "2025-07-08T09:00:00",
+                                                    "updatedAt": "2025-07-09T15:30:00",
+                                                    "campaignId": null,
+                                                    "maxApplicants": null,
+                                                    "currentApplications": 23,
+                                                    "approvedBy": "관리자",
+                                                    "approvalDate": "2025-07-09T15:30:00",
+                                                    "recruitmentPeriod": "2025-07-10 ~ 2025-07-20"
+                                                  },
+                                                  {
+                                                    "id": 22,
+                                                    "title": "화장품 체험 캠페인",
+                                                    "company": "아모레퍼시픽",
+                                                    "type": "배송형",
+                                                    "status": "EXPIRED",
+                                                    "statusText": "만료됨",
+                                                    "createdAt": "2025-06-15T14:20:00",
+                                                    "updatedAt": "2025-06-16T10:30:00",
+                                                    "campaignId": null,
+                                                    "maxApplicants": null,
+                                                    "currentApplications": 45,
+                                                    "approvedBy": "관리자",
+                                                    "approvalDate": "2025-06-16T10:30:00",
+                                                    "recruitmentPeriod": "2025-06-20 ~ 2025-07-01"
+                                                  }
+                                                ],
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 2,
+                                                  "totalElements": 12,
+                                                  "first": true,
+                                                  "last": false
+                                                }
+                                              }
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "사용자를 찾을 수 없음",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                            value = """
+                            {
+                              "success": false,
+                              "message": "사용자를 찾을 수 없습니다: 999",
+                              "errorCode": "USER_NOT_FOUND",
+                              "status": 404
+                            }
+                            """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "유효하지 않은 상태입니다: INVALID_STATUS",
+                                      "errorCode": "INVALID_PARAMETER",
+                                      "status": 400
+                                    }
+                                    """
+                            )
+                    )
+            )
+    })
+    @GetMapping("/{userId}/activities")
+    public ResponseEntity<?> getUserCampaignActivities(
+            @Parameter(description = "사용자 ID", required = true)
+            @PathVariable Long userId,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지당 항목 수", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "상태 필터 (USER: APPLIED/PENDING/SELECTED/REJECTED/COMPLETED, CLIENT: PENDING/APPROVED/REJECTED/EXPIRED)")
+            @RequestParam(required = false) String status
+    ) {
+        try {
+            if (page < 0) {
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "페이지 번호는 0 이상이어야 합니다",
+                        "INVALID_PARAMETER",
+                        400
+                ));
+            }
+
+            if (size < 1 || size > 100) {
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "페이지 크기는 1~100 사이여야 합니다",
+                        "INVALID_PARAMETER",
+                        400
+                ));
+            }
+
+            Pageable pageable = PageRequest.of(page, size);
+            UserCampaignActivityDto result = userCampaignActivityService.getUserCampaignActivities(userId, pageable, status);
+
+            return ResponseEntity.ok(BaseResponse.success(result, "사용자 캠페인 활동 내역 조회 성공"));
+
+        } catch (RuntimeException e) {
+            String message = e.getMessage();
+            if (message.contains("사용자를 찾을 수 없습니다")) {
+                return ResponseEntity.ok(BaseResponse.fail(message, "USER_NOT_FOUND", 404));
+            } else if (message.contains("유효하지 않은")) {
+                return ResponseEntity.ok(BaseResponse.fail(message, "INVALID_PARAMETER", 400));
+            } else {
+                log.error("사용자 캠페인 활동 내역 조회 중 오류 발생: userId={}, error={}", userId, message, e);
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "캠페인 활동 내역 조회 실패: " + message,
+                        "INTERNAL_ERROR",
+                        500
+                ));
+            }
+        } catch (Exception e) {
+            log.error("사용자 캠페인 활동 내역 조회 중 예기치 않은 오류 발생: userId={}", userId, e);
+            return ResponseEntity.ok(BaseResponse.fail(
+                    "캠페인 활동 내역 조회 실패: 서버 내부 오류",
                     "INTERNAL_ERROR",
                     500
             ));

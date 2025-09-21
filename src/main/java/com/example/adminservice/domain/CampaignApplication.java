@@ -34,7 +34,7 @@ public class CampaignApplication {
     @Builder.Default
     private ApplicationStatus applicationStatus = ApplicationStatus.APPLIED;
 
-    @Column(name = "applied_at", nullable = false)
+    @Column(name = "created_at", nullable = false)
     @Builder.Default
     private ZonedDateTime appliedAt = ZonedDateTime.now();
 

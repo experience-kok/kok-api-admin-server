@@ -2,6 +2,7 @@ package com.example.adminservice.controller;
 
 import com.example.adminservice.common.BaseResponse;
 import com.example.adminservice.dto.BannerPresignedUrlRequest;
+import com.example.adminservice.dto.KokpostPresignedUrlRequest;
 import com.example.adminservice.dto.PresignedUrlRequest;
 import com.example.adminservice.service.S3Service;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +33,118 @@ public class ImageUploadController {
     private final S3Service s3Service;
 
     @Operation(
+            summary = "Kokpost 이미지 업로드용 Presigned URL 생성",
+            description = """
+            S3에 kokpost 폴더에 이미지를 업로드하기 위한 presigned URL을 생성합니다.
+            
+            
+            ### 지원 파일 형식
+            - jpg, jpeg, png
+            
+            ### 제한사항
+            - URL 유효 시간: 5분
+            """,
+            security = { @SecurityRequirement(name = "bearerAuth") }
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Presigned URL 생성 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "성공",
+                                    summary = "Kokpost 이미지 업로드용 URL 생성 성공",
+                                    value = """
+                                    {
+                                      "success": true,
+                                      "message": "배너 이미지 업로드용 URL이 성공적으로 생성되었습니다.",
+                                      "status": 200,
+                                      "data": {
+                                        "presignedUrl": "https://ckokservice.s3.ap-northeast-2.amazonaws.com/kokpost/1756804652981-e3601f15-d8e3-4360-aa41-e8229402d4e5.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&..."
+                                      }
+                                    }
+                                    """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "지원하지 않는 파일 형식",
+                                            summary = "허용되지 않은 파일 확장자인 경우",
+                                            value = """
+                                            {
+                                              "success": false,
+                                              "message": "지원하지 않는 파일 형식입니다. 허용 형식: jpg, jpeg, png, gif, webp",
+                                              "errorCode": "UNSUPPORTED_FILE_TYPE",
+                                              "status": 400
+                                            }
+                                            """
+                                    )
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "URL 생성 실패",
+                                    summary = "presigned URL 생성 중 오류가 발생한 경우",
+                                    value = """
+                                    {
+                                      "success": false,
+                                      "message": "PreSigned URL 생성 중 오류가 발생했습니다.",
+                                      "errorCode": "URL_GENERATION_FAILED",
+                                      "status": 500
+                                    }
+                                    """
+                            )
+                    )
+            )
+    })
+    @PostMapping("/kokpost/presigned-url")
+    public ResponseEntity<?> generateKokpostPresignedUrl(
+            @Parameter(description = "파일 정보", required = true)
+            @Valid @RequestBody KokpostPresignedUrlRequest request
+    ) {
+        try {
+            log.info("Kokpost 이미지 Presigned URL 요청: fileExtension={}", request.getFileExtension());
+
+            // S3 Presigned URL 생성
+            S3Service.PresignedUrlResponse response = s3Service.generateKokpostPresignedUrl(request.getFileExtension());
+
+            log.info("Kokpost 이미지 Presigned URL 생성 완료");
+
+            // 응답 데이터 구성
+            Map<String, Object> responseData = Map.of(
+                    "presignedUrl", response.getPresignedUrl()
+            );
+
+            return ResponseEntity.ok(
+                    BaseResponse.success(
+                            responseData,
+                            "배너 이미지 업로드용 URL이 성공적으로 생성되었습니다."
+                    )
+            );
+        } catch (IllegalArgumentException e) {
+            log.warn("잘못된 요청: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(BaseResponse.fail(e.getMessage(), "VALIDATION_ERROR", 400));
+        } catch (Exception e) {
+            log.error("Kokpost Presigned URL 생성 중 오류 발생: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponse.fail("PreSigned URL 생성 중 오류가 발생했습니다.", "URL_GENERATION_FAILED", 500));
+        }
+    }
+
+    @Operation(
             summary = "배너 이미지 업로드용 Presigned URL 생성",
             description = """
             S3에 배너 이미지를 업로드하기 위한 presigned URL을 생성합니다.
@@ -42,7 +155,7 @@ public class ImageUploadController {
             3. 업로드 완료 후 S3 URL을 배너 생성 API에 사용합니다
             
             ### 지원 파일 형식
-            - jpg, jpeg, png, gif, webp
+            - jpg, jpeg, png
             
             ### 제한사항
             - 최대 파일 크기: 10MB
@@ -214,4 +327,7 @@ public class ImageUploadController {
                     .body(BaseResponse.fail("Presigned URL 생성에 실패했습니다.", "URL_GENERATION_FAILED", 500));
         }
     }
+
+
+
 }

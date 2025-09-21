@@ -42,6 +42,7 @@ public class CampaignApprovalService {
     private final CompanyRepository companyRepository;
     private final CampaignLocationRepository campaignLocationRepository;
     private final ClientNotificationService clientNotificationService;
+    private final SESService sesService;
 
     /**
      * 승인 대기 중인 캠페인 목록 조회
@@ -169,7 +170,7 @@ public class CampaignApprovalService {
             // 새로운 구조: User 객체를 직접 전달
             campaign.approve(admin, request.getComment());
 
-            // 캠페인 승인 알림 전송
+            // 캠페인 승인 알림 전송 (WebSocket/앱 내 알림)
             try {
                 clientNotificationService.sendCampaignApprovalNotification(
                         campaign.getCreatorId(), // 호환성 메서드 사용
@@ -182,11 +183,31 @@ public class CampaignApprovalService {
                 log.error("캠페인 승인 알림 전송 실패: campaignId={}, error={}",
                         campaign.getId(), e.getMessage(), e);
             }
+
+            // 캠페인 승인 이메일 발송
+            try {
+                User creator = campaign.getCreator();
+                if (creator != null && creator.getEmail() != null) {
+                    sesService.sendCampaignApprovedEmailSafe(
+                            creator.getEmail(),
+                            creator.getNickname() != null ? creator.getNickname() : "고객",
+                            campaign.getTitle()
+                    );
+                    log.info("캠페인 승인 이메일 발송 요청 완료: campaignId={}, email={}", 
+                            campaign.getId(), creator.getEmail());
+                } else {
+                    log.warn("캠페인 승인 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}", 
+                            campaign.getId());
+                }
+            } catch (Exception e) {
+                log.error("캠페인 승인 이메일 발송 실패: campaignId={}, error={}",
+                        campaign.getId(), e.getMessage(), e);
+            }
         } else if (newStatus == Campaign.ApprovalStatus.REJECTED) {
             // 새로운 구조: User 객체를 직접 전달
             campaign.reject(admin, request.getComment());
 
-            // 캠페인 거절 알림 전송
+            // 캠페인 거절 알림 전송 (WebSocket/앱 내 알림)
             try {
                 clientNotificationService.sendCampaignRejectionNotification(
                         campaign.getCreatorId(), // 호환성 메서드 사용
@@ -198,6 +219,27 @@ public class CampaignApprovalService {
                 log.info("캠페인 거절 알림 전송 요청 완료: campaignId={}", campaign.getId());
             } catch (Exception e) {
                 log.error("캠페인 거절 알림 전송 실패: campaignId={}, error={}",
+                        campaign.getId(), e.getMessage(), e);
+            }
+
+            // 캠페인 거절 이메일 발송
+            try {
+                User creator = campaign.getCreator();
+                if (creator != null && creator.getEmail() != null) {
+                    sesService.sendCampaignRejectedEmailSafe(
+                            creator.getEmail(),
+                            creator.getNickname() != null ? creator.getNickname() : "고객",
+                            campaign.getTitle(),
+                            request.getComment() != null ? request.getComment() : "승인 기준을 충족하지 않습니다."
+                    );
+                    log.info("캠페인 거절 이메일 발송 요청 완료: campaignId={}, email={}", 
+                            campaign.getId(), creator.getEmail());
+                } else {
+                    log.warn("캠페인 거절 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}", 
+                            campaign.getId());
+                }
+            } catch (Exception e) {
+                log.error("캠페인 거절 이메일 발송 실패: campaignId={}, error={}",
                         campaign.getId(), e.getMessage(), e);
             }
         } else {

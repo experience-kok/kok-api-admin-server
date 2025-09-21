@@ -5,11 +5,14 @@ import com.example.adminservice.dto.CampaignApprovalRequest;
 import com.example.adminservice.dto.CampaignApprovalResponse;
 import com.example.adminservice.dto.PendingCampaignResponse;
 import com.example.adminservice.dto.SimpleCampaignResponse;
+import com.example.adminservice.dto.CampaignApplicantListResponse;
 import com.example.adminservice.service.CampaignApprovalService;
+import com.example.adminservice.service.CampaignApplicantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -35,6 +38,7 @@ import java.util.Map;
 public class CampaignApprovalController {
 
     private final CampaignApprovalService campaignApprovalService;
+    private final CampaignApplicantService campaignApplicantService;
 
     @Operation(
             summary = "승인 대기 캠페인 목록 조회",
@@ -697,4 +701,200 @@ public class CampaignApprovalController {
             ));
         }
     }
+
+    @Operation(
+            summary = "캠페인 신청자 목록 조회",
+            description = """
+            특정 캠페인의 신청자 목록을 조회합니다.
+            
+            ### 응답 정보
+            - **ID**: 신청자 사용자 ID
+            - **닉네임**: 신청자 닉네임
+            - **이메일**: 신청자 이메일
+            - **권한**: 사용자 권한 (USER, CLIENT, ADMIN)
+            - **계정 상태**: 활성화/비활성화 상태 (true/false)
+            - **신청일**: 캠페인 신청 일시
+            - **신청 상태**: 신청 처리 상태 및 한글 텍스트
+            
+            ### 필터링 옵션
+            - **status**: 신청 상태로 필터링 (선택사항)
+              - `신청` 또는 `APPLIED`: 신청 상태
+              - `선정 대기중` 또는 `PENDING`: 선정 대기 상태
+              - `선정` 또는 `SELECTED`: 선정된 상태
+              - `거절` 또는 `REJECTED`: 거절된 상태
+              - `완료` 또는 `COMPLETED`: 완료된 상태
+              - 미입력 시: 모든 신청자 조회
+            
+            ### 페이징 기능
+            - 기본 10개씩 페이징
+            - 최신 신청자 순으로 정렬
+            - 전체 신청자 수 포함
+            
+            ### 사용 예시
+            - `GET /campaigns/123/applicants` - 캠페인 123의 모든 신청자 조회
+            - `GET /campaigns/123/applicants?status=선정` - 선정된 신청자만 조회
+            - `GET /campaigns/123/applicants?page=1&size=20` - 2페이지, 20개씩 조회
+            
+            ### 권한
+            - ADMIN 권한 필요
+            """,
+            security = { @SecurityRequirement(name = "bearerAuth") }
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "캠페인 신청자 목록 조회 성공",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CampaignApplicantListResponse.class),
+                    examples = @ExampleObject(
+                            value = """
+                            {
+                              "success": true,
+                              "message": "캠페인 신청자 목록 조회 성공",
+                              "status": 200,
+                              "data": {
+                                "campaignId": 123,
+                                "campaignTitle": "인스타 감성 카페 체험단 모집",
+                                "totalApplicants": 25,
+                                "applicants": [
+                                  {
+                                    "id": 1,
+                                    "nickname": "커피러버",
+                                    "email": "coffee@example.com",
+                                    "role": "USER",
+                                    "active": true,
+                                    "appliedAt": "2025-07-20T14:30:00+09:00",
+                                    "applicationStatus": "SELECTED",
+                                    "statusText": "선정"
+                                  },
+                                  {
+                                    "id": 2,
+                                    "nickname": "카페매니아",
+                                    "email": "cafemania@example.com",
+                                    "role": "USER",
+                                    "active": true,
+                                    "appliedAt": "2025-07-20T11:15:00+09:00",
+                                    "applicationStatus": "PENDING",
+                                    "statusText": "선정 대기중"
+                                  },
+                                  {
+                                    "id": 3,
+                                    "nickname": "인스타그래머",
+                                    "email": "insta@example.com",
+                                    "role": "USER",
+                                    "active": false,
+                                    "appliedAt": "2025-07-19T16:45:00+09:00",
+                                    "applicationStatus": "APPLIED",
+                                    "statusText": "신청"
+                                  }
+                                ],
+                                "pagination": {
+                                  "pageNumber": 0,
+                                  "pageSize": 10,
+                                  "totalPages": 3,
+                                  "totalElements": 25,
+                                  "first": true,
+                                  "last": false
+                                }
+                              }
+                            }
+                            """
+                    )
+            )
+    )
+    @ApiResponse(
+            responseCode = "404",
+            description = "캠페인을 찾을 수 없음",
+            content = @Content(
+                    mediaType = "application/json",
+                    examples = @ExampleObject(
+                            value = """
+                            {
+                              "success": false,
+                              "message": "캠페인을 찾을 수 없습니다: 999",
+                              "errorCode": "NOT_FOUND",
+                              "status": 404
+                            }
+                            """
+                    )
+            )
+    )
+
+    @ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 파라미터",
+            content = @Content(
+                    mediaType = "application/json",
+                    examples = @ExampleObject(
+                            value = """
+                            {
+                              "success": false,
+                              "message": "유효하지 않은 신청 상태입니다: INVALID_STATUS",
+                              "errorCode": "INVALID_PARAMETER",
+                              "status": 400
+                            }
+                            """
+                    )
+            )
+    )
+
+    @GetMapping("/{campaignId}/applicants")
+    public ResponseEntity<?> getCampaignApplicants(
+            @Parameter(description = "캠페인 ID", required = true)
+            @PathVariable Long campaignId,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지당 항목 수", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "신청 상태 필터 (신청/선정 대기중/선정/거절/완료)", example = "선정")
+            @RequestParam(required = false) String status
+    ) {
+        try {
+            if (page < 0) {
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "페이지 번호는 0 이상이어야 합니다",
+                        "INVALID_PARAMETER",
+                        400
+                ));
+            }
+
+            if (size < 1 || size > 100) {
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "페이지 크기는 1~100 사이여야 합니다",
+                        "INVALID_PARAMETER",
+                        400
+                ));
+            }
+
+            CampaignApplicantListResponse result = campaignApplicantService.getCampaignApplicants(
+                    campaignId, page, size, status
+            );
+
+            return ResponseEntity.ok(BaseResponse.success(result, "캠페인 신청자 목록 조회 성공"));
+
+        } catch (RuntimeException e) {
+            String message = e.getMessage();
+            if (message.contains("캠페인을 찾을 수 없습니다")) {
+                return ResponseEntity.ok(BaseResponse.fail(message, "NOT_FOUND", 404));
+            } else if (message.contains("유효하지 않은")) {
+                return ResponseEntity.ok(BaseResponse.fail(message, "INVALID_PARAMETER", 400));
+            } else {
+                log.error("캠페인 신청자 목록 조회 중 오류 발생: campaignId={}, error={}", campaignId, message, e);
+                return ResponseEntity.ok(BaseResponse.fail(
+                        "캠페인 신청자 목록 조회 실패: " + message,
+                        "INTERNAL_ERROR",
+                        500
+                ));
+            }
+        } catch (Exception e) {
+            log.error("캠페인 신청자 목록 조회 중 예기치 않은 오류 발생: campaignId={}", campaignId, e);
+            return ResponseEntity.ok(BaseResponse.fail(
+                    "캠페인 신청자 목록 조회 실패: 서버 내부 오류",
+                    "INTERNAL_ERROR",
+                    500
+            ));
+        }
+    }
+
+
 }

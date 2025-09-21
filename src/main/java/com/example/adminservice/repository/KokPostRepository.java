@@ -26,6 +26,11 @@ public interface KokPostRepository extends JpaRepository<KokPost, Long> {
     List<KokPost> findByTitleContainingIgnoreCase(String title, Sort sort);
 
     /**
+     * 제목으로 콕포스트 검색 (페이지네이션, 대소문자 구분 없이)
+     */
+    Page<KokPost> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+
+    /**
      * 조회수 상위 N개 콕포스트 조회
      */
     List<KokPost> findTop10ByOrderByViewCountDesc();

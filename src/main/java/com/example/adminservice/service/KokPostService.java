@@ -8,10 +8,14 @@ import com.example.adminservice.dto.KokPostCreateRequest;
 import com.example.adminservice.dto.KokPostDetailResponse;
 import com.example.adminservice.dto.KokPostListResponse;
 import com.example.adminservice.dto.KokPostUpdateRequest;
+import com.example.adminservice.dto.PagedResponse;
 import com.example.adminservice.repository.CampaignRepository;
 import com.example.adminservice.repository.KokPostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +89,34 @@ public class KokPostService {
         return kokPosts.stream()
                 .map(KokPostListResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 정렬 옵션에 따른 Sort 객체 생성
+     */
+    private Sort getSortFromOption(SortOption sortOption) {
+        return switch (sortOption) {
+            case VIEW_COUNT_DESC, VIEW_COUNT_ASC -> sortOption.getSort();
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
+    }
+
+    /**
+     * 콕포스트 전체 목록 조회 (페이지네이션, 정렬 옵션 포함)
+     */
+    public PagedResponse<KokPostListResponse> getAllKokPosts(SortOption sortOption, Pageable pageable) {
+        log.info("콕포스트 전체 목록 조회 요청 (페이지네이션) - 정렬: {}, 페이지: {}, 크기: {}", 
+                sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize());
+
+        Sort sort = getSortFromOption(sortOption);
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<KokPost> kokPostPage = kokPostRepository.findAll(sortedPageable);
+        
+        log.info("콕포스트 목록 조회 완료 (페이지네이션) - 정렬: {}, 페이지: {}/{}, 총 {}개", 
+                sortOption.getDescription(), kokPostPage.getNumber() + 1, kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
+        
+        Page<KokPostListResponse> responsePage = kokPostPage.map(KokPostListResponse::from);
+        return PagedResponse.from(responsePage);
     }
 
     /**
@@ -189,6 +221,24 @@ public class KokPostService {
         return kokPosts.stream()
                 .map(KokPostListResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 제목으로 콕포스트 검색 (페이지네이션, 정렬 옵션 포함)
+     */
+    public PagedResponse<KokPostListResponse> searchKokPostsByTitle(String title, SortOption sortOption, Pageable pageable) {
+        log.info("콕포스트 제목 검색 요청 (페이지네이션) - 키워드: {}, 정렬: {}, 페이지: {}, 크기: {}", 
+                title, sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize());
+
+        Sort sort = getSortFromOption(sortOption);
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        Page<KokPost> kokPostPage = kokPostRepository.findByTitleContainingIgnoreCase(title, sortedPageable);
+
+        log.info("콕포스트 검색 완료 (페이지네이션) - 키워드: {}, 정렬: {}, 페이지: {}/{}, 총 {}개",
+                title, sortOption.getDescription(), kokPostPage.getNumber() + 1, kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
+
+        Page<KokPostListResponse> responsePage = kokPostPage.map(KokPostListResponse::from);
+        return PagedResponse.from(responsePage);
     }
 
     /**

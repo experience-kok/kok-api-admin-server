@@ -64,13 +64,14 @@ public class NoticeController {
                                                     "updatedAt": "2025-08-27T15:45:00"
                                                   }
                                                 ],
-                                                "currentPage": 0,
-                                                "totalPages": 5,
-                                                "size": 10,
-                                                "totalElements": 48,
-                                                "first": true,
-                                                "last": false,
-                                                "empty": false
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 5,
+                                                  "totalElements": 50,
+                                                  "first": true,
+                                                  "last": false
+                                                }
                                               }
                                             }"""
                             )
@@ -370,13 +371,14 @@ public class NoticeController {
                                                     "updatedAt": "2025-08-27T15:45:00"
                                                   }
                                                 ],
-                                                "currentPage": 0,
-                                                "totalPages": 2,
-                                                "size": 10,
-                                                "totalElements": 15,
-                                                "first": true,
-                                                "last": false,
-                                                "empty": false
+                                                "pagination": {
+                                                  "pageNumber": 0,
+                                                  "pageSize": 10,
+                                                  "totalPages": 2,
+                                                  "totalElements": 15,
+                                                  "first": true,
+                                                  "last": false
+                                                }
                                               }
                                             }"""
                             )

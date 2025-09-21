@@ -15,37 +15,46 @@ public class NoticePageResponse {
     @Schema(description = "공지사항 목록")
     private List<NoticeListResponse> notices;
 
-    @Schema(description = "현재 페이지 (0부터 시작)", example = "0")
-    private int currentPage;
+    @Schema(description = "페이지네이션 정보")
+    private PaginationInfo pagination;
 
-    @Schema(description = "전체 페이지 수", example = "5")
-    private int totalPages;
+    @Getter
+    @Builder
+    @Schema(description = "페이지네이션 정보")
+    public static class PaginationInfo {
+        
+        @Schema(description = "현재 페이지 번호 (0부터 시작)", example = "0")
+        private int pageNumber;
 
-    @Schema(description = "현재 페이지 항목 수", example = "10")
-    private int size;
+        @Schema(description = "페이지 크기", example = "10")
+        private int pageSize;
 
-    @Schema(description = "전체 항목 수", example = "48")
-    private long totalElements;
+        @Schema(description = "전체 페이지 수", example = "5")
+        private int totalPages;
 
-    @Schema(description = "첫 번째 페이지 여부", example = "true")
-    private boolean first;
+        @Schema(description = "전체 항목 수", example = "50")
+        private long totalElements;
 
-    @Schema(description = "마지막 페이지 여부", example = "false")
-    private boolean last;
+        @Schema(description = "첫 번째 페이지 여부", example = "true")
+        private boolean first;
 
-    @Schema(description = "빈 페이지 여부", example = "false")
-    private boolean empty;
+        @Schema(description = "마지막 페이지 여부", example = "false")
+        private boolean last;
+    }
 
     public static NoticePageResponse from(Page<NoticeListResponse> page) {
-        return NoticePageResponse.builder()
-                .notices(page.getContent())
-                .currentPage(page.getNumber())
+        PaginationInfo paginationInfo = PaginationInfo.builder()
+                .pageNumber(page.getNumber())
+                .pageSize(page.getSize())
                 .totalPages(page.getTotalPages())
-                .size(page.getSize())
                 .totalElements(page.getTotalElements())
                 .first(page.isFirst())
                 .last(page.isLast())
-                .empty(page.isEmpty())
+                .build();
+
+        return NoticePageResponse.builder()
+                .notices(page.getContent())
+                .pagination(paginationInfo)
                 .build();
     }
 }

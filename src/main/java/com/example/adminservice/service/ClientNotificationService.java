@@ -92,18 +92,19 @@ public class ClientNotificationService {
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(notificationTimeoutSeconds))
+                .retry(2) // 2번 재시도
                 .doOnSuccess(response -> {
                     log.info("캠페인 {} 알림 전송 성공: userId={}, campaignId={}, response={}",
                             actionType, request.getUserId(), request.getCampaignId(), response);
                 })
                 .doOnError(error -> {
                     log.error("캠페인 {} 알림 전송 실패: userId={}, campaignId={}, error={}",
-                            actionType, request.getUserId(), request.getCampaignId(), error.getMessage(), error);
+                            actionType, request.getUserId(), request.getCampaignId(), error.getMessage());
                 })
                 .onErrorResume(error -> {
                     // 알림 전송 실패가 메인 로직에 영향을 주지 않도록 에러를 무시
-                    log.warn("캠페인 {} 알림 전송 실패했지만 계속 진행: userId={}, campaignId={}",
-                            actionType, request.getUserId(), request.getCampaignId());
+                    log.warn("캠페인 {} 알림 전송 최종 실패했지만 계속 진행: userId={}, campaignId={}, 사유: {}",
+                            actionType, request.getUserId(), request.getCampaignId(), error.getMessage());
                     return Mono.empty();
                 })
                 .subscribe(); // 비동기 실행

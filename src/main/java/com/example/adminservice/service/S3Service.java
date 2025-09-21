@@ -254,6 +254,53 @@ public class S3Service {
     }
 
     /**
+     * Kokpost 이미지 업로드용 presigned URL 생성
+     *
+     * @param fileExtension 파일 확장자 (jpg, png 등)
+     * @return presigned URL과 파일 키가 포함된 정보
+     */
+    public PresignedUrlResponse generateKokpostPresignedUrl(String fileExtension) {
+        try {
+            // 고유한 파일명 생성 (타임스탬프 + UUID)
+            String uuid = UUID.randomUUID().toString();
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String fileName = String.format("%s-%s.%s", timestamp, uuid, fileExtension);
+            String objectKey = "kokpost/" + fileName;
+
+            log.info("Kokpost 이미지 presigned URL 생성 시작 - objectKey: {}", objectKey);
+
+            // PutObjectRequest 생성
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .contentType(determineContentType(fileExtension))
+                    .build();
+
+            // Presigned URL 요청 생성
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofSeconds(300)) // 5분
+                    .putObjectRequest(putObjectRequest)
+                    .build();
+
+            // Presigned URL 생성
+            PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
+            String presignedUrl = presignedRequest.url().toString();
+
+            log.info("Kokpost 이미지 presigned URL 생성 완료 - objectKey: {}", objectKey);
+
+            return PresignedUrlResponse.builder()
+                    .presignedUrl(presignedUrl)
+                    .objectKey(objectKey)
+                    .fileName(fileName)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Kokpost Presigned URL 생성 중 오류 발생: {}", e.getMessage(), e);
+            throw new RuntimeException("Presigned URL 생성에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 일반 이미지 업로드용 presigned URL 생성
      *
      * @param fileExtension 파일 확장자
