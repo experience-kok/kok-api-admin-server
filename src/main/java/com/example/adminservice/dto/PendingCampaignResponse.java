@@ -83,6 +83,9 @@ public class PendingCampaignResponse {
     @Schema(description = "캠페인 미션 정보")
     private MissionInfo missionInfo;
 
+    @Schema(description = "캠페인 카테고리 정보")
+    private CategoryInfo category;
+
 
     /**
      * 승인자 정보
@@ -234,5 +237,21 @@ public class PendingCampaignResponse {
 
         @Schema(description = "미션 수정 일시", example = "2025-07-14T15:30:00")
         private LocalDateTime updatedAt;
+    }
+
+    /**
+     * 캠페인 카테고리 정보
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "캠페인 카테고리 정보")
+    public static class CategoryInfo {
+        @Schema(description = "카테고리 타입", example = "방문", allowableValues = {"방문", "배송"})
+        private String type;
+
+        @Schema(description = "카테고리 이름", example = "카페")
+        private String name;
     }
 }

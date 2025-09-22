@@ -113,8 +113,6 @@ public class CampaignApplicantService {
                 .id(application.getUser().getId())
                 .nickname(application.getUser().getNickname())
                 .email(application.getUser().getEmail())
-                .role(application.getUser().getRole().name())
-                .active(application.getUser().getActive())
                 .appliedAt(application.getAppliedAt())
                 .applicationStatus(application.getApplicationStatus().name())
                 .statusText(application.getApplicationStatus().getDescription())

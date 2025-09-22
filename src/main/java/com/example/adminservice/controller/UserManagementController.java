@@ -487,13 +487,6 @@ public class UserManagementController {
             description = """
             사용자의 캠페인 활동 내역을 조회합니다. 사용자 타입에 따라 다른 응답을 제공합니다.
             
-            ### USER 타입
-            - 캠페인 신청 내역을 상태별로 제공
-            - 상태: APPLIED(신청), PENDING(선정 대기중), SELECTED(선정), REJECTED(거절), COMPLETED(완료)
-            
-            ### CLIENT 타입  
-            - 생성한 캠페인을 승인 상태별로 제공
-            - 상태: PENDING(대기중), APPROVED(승인됨), REJECTED(거절됨), EXPIRED(만료됨)
             
             ### 공통 기능
             - 페이징 지원 (기본 10개씩)
@@ -530,7 +523,6 @@ public class UserManagementController {
                                                     "title": "카페 방문 체험 캠페인",
                                                     "company": "스타벅스 코리아",
                                                     "type": "방문형",
-                                                    "status": "COMPLETED",
                                                     "statusText": "완료",
                                                     "createdAt": "2025-07-10T14:30:00",
                                                     "updatedAt": "2025-07-15T18:00:00",
@@ -570,8 +562,7 @@ public class UserManagementController {
                                                     "id": 25,
                                                     "title": "신상품 리뷰 캠페인",
                                                     "company": "올리브영",
-                                                    "type": "배송형",
-                                                    "status": "APPROVED",
+                                                    "campaignType": "블로그",
                                                     "statusText": "승인됨",
                                                     "createdAt": "2025-07-08T09:00:00",
                                                     "updatedAt": "2025-07-09T15:30:00",
@@ -586,8 +577,7 @@ public class UserManagementController {
                                                     "id": 22,
                                                     "title": "화장품 체험 캠페인",
                                                     "company": "아모레퍼시픽",
-                                                    "type": "배송형",
-                                                    "status": "EXPIRED",
+                                                    "campaignType": "인스타",
                                                     "statusText": "만료됨",
                                                     "createdAt": "2025-06-15T14:20:00",
                                                     "updatedAt": "2025-06-16T10:30:00",

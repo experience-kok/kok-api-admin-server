@@ -410,6 +410,10 @@ public class CampaignApprovalController {
                                           "missionDeadlineDate": "2025-08-30",
                                           "createdAt": "2025-07-14T15:30:00",
                                           "updatedAt": "2025-07-14T15:30:00"
+                                        },
+                                        "category": {
+                                          "type": "방문",
+                                          "name": "카페"
                                         }
                                       }
                                     }
@@ -705,40 +709,36 @@ public class CampaignApprovalController {
     @Operation(
             summary = "캠페인 신청자 목록 조회",
             description = """
-            특정 캠페인의 신청자 목록을 조회합니다.
-            
-            ### 응답 정보
-            - **ID**: 신청자 사용자 ID
-            - **닉네임**: 신청자 닉네임
-            - **이메일**: 신청자 이메일
-            - **권한**: 사용자 권한 (USER, CLIENT, ADMIN)
-            - **계정 상태**: 활성화/비활성화 상태 (true/false)
-            - **신청일**: 캠페인 신청 일시
-            - **신청 상태**: 신청 처리 상태 및 한글 텍스트
-            
-            ### 필터링 옵션
-            - **status**: 신청 상태로 필터링 (선택사항)
-              - `신청` 또는 `APPLIED`: 신청 상태
-              - `선정 대기중` 또는 `PENDING`: 선정 대기 상태
-              - `선정` 또는 `SELECTED`: 선정된 상태
-              - `거절` 또는 `REJECTED`: 거절된 상태
-              - `완료` 또는 `COMPLETED`: 완료된 상태
-              - 미입력 시: 모든 신청자 조회
-            
-            ### 페이징 기능
-            - 기본 10개씩 페이징
-            - 최신 신청자 순으로 정렬
-            - 전체 신청자 수 포함
-            
-            ### 사용 예시
-            - `GET /campaigns/123/applicants` - 캠페인 123의 모든 신청자 조회
-            - `GET /campaigns/123/applicants?status=선정` - 선정된 신청자만 조회
-            - `GET /campaigns/123/applicants?page=1&size=20` - 2페이지, 20개씩 조회
-            
-            ### 권한
-            - ADMIN 권한 필요
-            """,
-            security = { @SecurityRequirement(name = "bearerAuth") }
+                    특정 캠페인의 신청자 목록을 조회합니다.
+                    
+                    ### 응답 정보
+                    - **ID**: 신청자 사용자 ID
+                    - **닉네임**: 신청자 닉네임
+                    - **이메일**: 신청자 이메일
+                    - **권한**: 사용자 권한 (USER, CLIENT, ADMIN)
+                    - **계정 상태**: 활성화/비활성화 상태 (true/false)
+                    - **신청일**: 캠페인 신청 일시
+                    - **신청 상태**: 신청 처리 상태 및 한글 텍스트
+                    
+                    ### 필터링 옵션
+                    - **status**: 신청 상태로 필터링 (선택사항)
+                      - `신청` 또는 `APPLIED`: 신청 상태
+                      - `선정 대기중` 또는 `PENDING`: 선정 대기 상태
+                      - `선정` 또는 `SELECTED`: 선정된 상태
+                      - `거절` 또는 `REJECTED`: 거절된 상태
+                      - `완료` 또는 `COMPLETED`: 완료된 상태
+                      - 미입력 시: 모든 신청자 조회
+                    
+                    ### 페이징 기능
+                    - 기본 10개씩 페이징
+                    - 최신 신청자 순으로 정렬
+                    - 전체 신청자 수 포함
+                    
+                    
+                    ### 권한
+                    - ADMIN 권한 필요
+                    """,
+            security = {@SecurityRequirement(name = "bearerAuth")}
     )
     @ApiResponse(
             responseCode = "200",
@@ -748,57 +748,51 @@ public class CampaignApprovalController {
                     schema = @Schema(implementation = CampaignApplicantListResponse.class),
                     examples = @ExampleObject(
                             value = """
-                            {
-                              "success": true,
-                              "message": "캠페인 신청자 목록 조회 성공",
-                              "status": 200,
-                              "data": {
-                                "campaignId": 123,
-                                "campaignTitle": "인스타 감성 카페 체험단 모집",
-                                "totalApplicants": 25,
-                                "applicants": [
-                                  {
-                                    "id": 1,
-                                    "nickname": "커피러버",
-                                    "email": "coffee@example.com",
-                                    "role": "USER",
-                                    "active": true,
-                                    "appliedAt": "2025-07-20T14:30:00+09:00",
-                                    "applicationStatus": "SELECTED",
-                                    "statusText": "선정"
-                                  },
-                                  {
-                                    "id": 2,
-                                    "nickname": "카페매니아",
-                                    "email": "cafemania@example.com",
-                                    "role": "USER",
-                                    "active": true,
-                                    "appliedAt": "2025-07-20T11:15:00+09:00",
-                                    "applicationStatus": "PENDING",
-                                    "statusText": "선정 대기중"
-                                  },
-                                  {
-                                    "id": 3,
-                                    "nickname": "인스타그래머",
-                                    "email": "insta@example.com",
-                                    "role": "USER",
-                                    "active": false,
-                                    "appliedAt": "2025-07-19T16:45:00+09:00",
-                                    "applicationStatus": "APPLIED",
-                                    "statusText": "신청"
-                                  }
-                                ],
-                                "pagination": {
-                                  "pageNumber": 0,
-                                  "pageSize": 10,
-                                  "totalPages": 3,
-                                  "totalElements": 25,
-                                  "first": true,
-                                  "last": false
-                                }
-                              }
-                            }
-                            """
+                                    {
+                                      "success": true,
+                                      "message": "캠페인 신청자 목록 조회 성공",
+                                      "status": 200,
+                                      "data": {
+                                        "campaignId": 123,
+                                        "campaignTitle": "인스타 감성 카페 체험단 모집",
+                                        "totalApplicants": 25,
+                                        "applicants": [
+                                          {
+                                            "id": 1,
+                                            "nickname": "커피러버",
+                                            "email": "coffee@example.com",
+                                            "appliedAt": "2025-07-20T14:30:00+09:00",
+                                            "applicationStatus": "SELECTED",
+                                            "statusText": "선정"
+                                          },
+                                          {
+                                            "id": 2,
+                                            "nickname": "카페매니아",
+                                            "email": "cafemania@example.com",
+                                            "appliedAt": "2025-07-20T11:15:00+09:00",
+                                            "applicationStatus": "PENDING",
+                                            "statusText": "선정 대기중"
+                                          },
+                                          {
+                                            "id": 3,
+                                            "nickname": "인스타그래머",
+                                            "email": "insta@example.com",
+                                            "appliedAt": "2025-07-19T16:45:00+09:00",
+                                            "applicationStatus": "APPLIED",
+                                            "statusText": "신청"
+                                          }
+                                        ],
+                                        "pagination": {
+                                          "pageNumber": 0,
+                                          "pageSize": 10,
+                                          "totalPages": 3,
+                                          "totalElements": 25,
+                                          "first": true,
+                                          "last": false
+                                        }
+                                      }
+                                    }
+                                    """
                     )
             )
     )
@@ -809,13 +803,13 @@ public class CampaignApprovalController {
                     mediaType = "application/json",
                     examples = @ExampleObject(
                             value = """
-                            {
-                              "success": false,
-                              "message": "캠페인을 찾을 수 없습니다: 999",
-                              "errorCode": "NOT_FOUND",
-                              "status": 404
-                            }
-                            """
+                                    {
+                                      "success": false,
+                                      "message": "캠페인을 찾을 수 없습니다: 999",
+                                      "errorCode": "NOT_FOUND",
+                                      "status": 404
+                                    }
+                                    """
                     )
             )
     )
@@ -827,13 +821,13 @@ public class CampaignApprovalController {
                     mediaType = "application/json",
                     examples = @ExampleObject(
                             value = """
-                            {
-                              "success": false,
-                              "message": "유효하지 않은 신청 상태입니다: INVALID_STATUS",
-                              "errorCode": "INVALID_PARAMETER",
-                              "status": 400
-                            }
-                            """
+                                    {
+                                      "success": false,
+                                      "message": "유효하지 않은 신청 상태입니다: INVALID_STATUS",
+                                      "errorCode": "INVALID_PARAMETER",
+                                      "status": 400
+                                    }
+                                    """
                     )
             )
     )
