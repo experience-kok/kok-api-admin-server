@@ -1,9 +1,6 @@
 package com.example.adminservice.service;
 
-import com.example.adminservice.domain.Campaign;
-import com.example.adminservice.domain.CampaignLocation;
-import com.example.adminservice.domain.Company;
-import com.example.adminservice.domain.User;
+import com.example.adminservice.domain.*;
 import com.example.adminservice.dto.CampaignApprovalRequest;
 import com.example.adminservice.dto.CampaignApprovalResponse;
 import com.example.adminservice.dto.PendingCampaignResponse;
@@ -193,10 +190,10 @@ public class CampaignApprovalService {
                             creator.getNickname() != null ? creator.getNickname() : "고객",
                             campaign.getTitle()
                     );
-                    log.info("캠페인 승인 이메일 발송 요청 완료: campaignId={}, email={}", 
+                    log.info("캠페인 승인 이메일 발송 요청 완료: campaignId={}, email={}",
                             campaign.getId(), creator.getEmail());
                 } else {
-                    log.warn("캠페인 승인 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}", 
+                    log.warn("캠페인 승인 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}",
                             campaign.getId());
                 }
             } catch (Exception e) {
@@ -232,10 +229,10 @@ public class CampaignApprovalService {
                             campaign.getTitle(),
                             request.getComment() != null ? request.getComment() : "승인 기준을 충족하지 않습니다."
                     );
-                    log.info("캠페인 거절 이메일 발송 요청 완료: campaignId={}, email={}", 
+                    log.info("캠페인 거절 이메일 발송 요청 완료: campaignId={}, email={}",
                             campaign.getId(), creator.getEmail());
                 } else {
-                    log.warn("캠페인 거절 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}", 
+                    log.warn("캠페인 거절 이메일 발송 실패 - 생성자 정보 또는 이메일 없음: campaignId={}",
                             campaign.getId());
                 }
             } catch (Exception e) {
@@ -541,6 +538,20 @@ public class CampaignApprovalService {
                     .build();
         }
 
+        // 카테고리 정보 조회
+        PendingCampaignResponse.CategoryInfo categoryInfo = null;
+        if (campaign.getCategory() != null) {
+            CampaignCategory category = campaign.getCategory();
+            log.debug("카테고리 정보 로드: campaignId={}, categoryId={}, type={}, name={}",
+                    campaign.getId(), category.getId(), category.getType(), category.getName());
+            categoryInfo = PendingCampaignResponse.CategoryInfo.builder()
+                    .type(category.getType())
+                    .name(category.getName())
+                    .build();
+        } else {
+            log.warn("카테고리 정보가 없습니다: campaignId={}", campaign.getId());
+        }
+
         return PendingCampaignResponse.builder()
                 .id(campaign.getId())
                 .title(campaign.getTitle())
@@ -561,6 +572,7 @@ public class CampaignApprovalService {
                 .company(companyInfo)
                 .location(locationInfo)
                 .missionInfo(missionInfo)
+                .category(categoryInfo)
                 .build();
     }
 

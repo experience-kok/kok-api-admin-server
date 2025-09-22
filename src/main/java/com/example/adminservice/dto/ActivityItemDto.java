@@ -23,12 +23,9 @@ public class ActivityItemDto {
     @Schema(description = "회사명", example = "스타벅스 코리아", nullable = true)
     private String company;
     
-    @Schema(description = "캠페인 타입", example = "방문형", allowableValues = {"방문형", "배송형"}, requiredMode = Schema.RequiredMode.REQUIRED)
-    private String type;
-    
-    @Schema(description = "상태 (영문)", example = "COMPLETED", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String status;
-    
+    @Schema(description = "캠페인 타입", example = "블로그", allowableValues = {"인스타그램", "블로그","유튜브"}, requiredMode = Schema.RequiredMode.REQUIRED)
+    private String campaignType;
+
     @Schema(description = "상태 (한글)", example = "완료", requiredMode = Schema.RequiredMode.REQUIRED)
     private String statusText;
     

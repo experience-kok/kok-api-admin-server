@@ -19,7 +19,10 @@ public class CampaignCategory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "category_type", nullable = false, length = 50)
+    private String type;
+
+    @Column(name = "category_name", nullable = false, length = 100)
     private String name;
 
     @Column(name = "description", columnDefinition = "TEXT")
@@ -28,4 +31,10 @@ public class CampaignCategory {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private java.time.ZonedDateTime createdAt;
+
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private java.time.ZonedDateTime updatedAt;
 }
