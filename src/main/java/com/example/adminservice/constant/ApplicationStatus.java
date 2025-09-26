@@ -5,9 +5,10 @@ package com.example.adminservice.constant;
  */
 public enum ApplicationStatus {
     APPLIED("신청"),
+    PENDING("선정 대기중"),
     SELECTED("선정"),
     REJECTED("거절"),
-    CANCELLED("취소");
+    COMPLETED("완료");
 
     private final String description;
 
