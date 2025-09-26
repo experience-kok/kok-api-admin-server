@@ -148,4 +148,16 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
            "WHERE ca.campaign.id IN :campaignIds " +
            "GROUP BY ca.campaign.id")
     Object[][] countApplicationsByCampaignIds(@Param("campaignIds") List<Long> campaignIds);
+
+    /**
+     * 만료된 캠페인 수 조회 (모집 마감일이 현재 날짜보다 이전인 캠페인)
+     */
+    @Query("SELECT COUNT(c) FROM Campaign c WHERE c.recruitmentEndDate < CURRENT_DATE")
+    long countExpiredCampaigns();
+
+    /**
+     * 특정 승인 상태의 만료된 캠페인 수 조회
+     */
+    @Query("SELECT COUNT(c) FROM Campaign c WHERE c.approvalStatus = :status AND c.recruitmentEndDate < CURRENT_DATE")
+    long countExpiredCampaignsByStatus(@Param("status") Campaign.ApprovalStatus status);
 }

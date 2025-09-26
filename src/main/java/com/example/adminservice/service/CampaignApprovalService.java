@@ -385,30 +385,38 @@ public class CampaignApprovalService {
         long totalCampaigns = campaignRepository.count();
         stats.put("totalCampaigns", totalCampaigns);
 
+        // 만료되지 않은 각 상태별 캠페인 수
         long pendingCount = campaignRepository.countByApprovalStatus(Campaign.ApprovalStatus.PENDING);
         long approvedCount = campaignRepository.countByApprovalStatus(Campaign.ApprovalStatus.APPROVED);
         long rejectedCount = campaignRepository.countByApprovalStatus(Campaign.ApprovalStatus.REJECTED);
+        
+        // 만료된 캠페인 수 (모든 상태에서 모집 마감일이 지난 캠페인)
         long expiredCount = calculateExpiredCampaignsCount();
 
-        stats.put("pendingCampaigns", pendingCount);
-        stats.put("approvedCampaigns", approvedCount);
-        stats.put("rejectedCampaigns", rejectedCount);
+        // 만료되지 않은 상태별 캠페인 수에서 만료된 것들을 제외
+        long expiredPendingCount = campaignRepository.countExpiredCampaignsByStatus(Campaign.ApprovalStatus.PENDING);
+        long expiredApprovedCount = campaignRepository.countExpiredCampaignsByStatus(Campaign.ApprovalStatus.APPROVED);
+        long expiredRejectedCount = campaignRepository.countExpiredCampaignsByStatus(Campaign.ApprovalStatus.REJECTED);
+
+        stats.put("pendingCampaigns", pendingCount - expiredPendingCount);
+        stats.put("approvedCampaigns", approvedCount - expiredApprovedCount);
+        stats.put("rejectedCampaigns", rejectedCount - expiredRejectedCount);
         stats.put("expiredCampaigns", expiredCount);
+
+        // 로깅으로 검증
+        log.debug("캠페인 통계: total={}, pending={} (만료제외 {}), approved={} (만료제외 {}), rejected={} (만료제외 {}), expired={}", 
+                totalCampaigns, pendingCount, pendingCount - expiredPendingCount, 
+                approvedCount, approvedCount - expiredApprovedCount, 
+                rejectedCount, rejectedCount - expiredRejectedCount, expiredCount);
 
         return stats;
     }
 
     /**
-     * 만료된 캠페인 개수 계산
+     * 만료된 캠페인 개수 계산 (DB 쿼리로 직접 조회)
      */
     private long calculateExpiredCampaignsCount() {
-        List<Campaign> allCampaigns = campaignRepository.findAll();
-        LocalDate currentDate = LocalDate.now();
-
-        return allCampaigns.stream()
-                .filter(campaign -> campaign.getRecruitmentEndDate() != null &&
-                        campaign.getRecruitmentEndDate().isBefore(currentDate))
-                .count();
+        return campaignRepository.countExpiredCampaigns();
     }
 
     /**
