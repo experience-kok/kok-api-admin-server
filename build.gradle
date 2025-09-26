@@ -30,18 +30,32 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'  // WebSocket 의존성 추가
 	compileOnly 'org.projectlombok:lombok'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5' // Jackson serializer for JWT
 	runtimeOnly 'org.postgresql:postgresql'
+	// implementation 'com.h2database:h2' // H2 데이터베이스 제거
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	testRuntimeOnly 'com.h2database:h2' // H2 데이터베이스 추가
+	// testRuntimeOnly 'com.h2database:h2' // H2 데이터베이스 제거
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springdoc:springdoc-openapi-starter-common:2.3.0'
+	
+	// AWS S3 SDK 추가
+	implementation 'software.amazon.awssdk:s3:2.21.29'
+	implementation 'software.amazon.awssdk:sts:2.21.29'
+	
+	// AWS SES SDK 추가
+	implementation 'com.amazonaws:aws-java-sdk-ses:1.12.470'
+
+
+	
+	// 이미지 처리 라이브러리 추가
+	implementation 'net.coobird:thumbnailator:0.4.19'
 }
 
 tasks.named('test') {
