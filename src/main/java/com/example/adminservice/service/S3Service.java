@@ -6,13 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -21,14 +19,15 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import jakarta.annotation.PostConstruct;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.net.URL;
 import java.time.Duration;
 import java.util.UUID;
 
 /**
  * AWS S3 관련 서비스
  * Presigned URL 생성 및 파일 업로드 관리
+ * EC2 IAM Role을 통한 인증 사용
  */
+
 @Slf4j
 @Service
 public class S3Service {
@@ -36,17 +35,14 @@ public class S3Service {
     @Autowired
     private ImageProcessor imageProcessor;
 
-    @Value("${aws.accessKey}")
-    private String accessKey;
-
-    @Value("${aws.secretKey}")
-    private String secretKey;
-
     @Value("${aws.s3.region}")
     private String region;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
+
+    @Value("${aws.s3.bucket.prefix:}")
+    private String bucketPrefix;
 
     @Value("${aws.s3.presigned-url.expiration}")
     private int presignedUrlExpirationSeconds;
@@ -60,20 +56,21 @@ public class S3Service {
     @PostConstruct
     public void initializeS3Client() {
         try {
-            AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
             Region awsRegion = Region.of(region);
 
+            // EC2 IAM Role을 통한 자동 인증
             this.s3Client = S3Client.builder()
                     .region(awsRegion)
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                    .credentialsProvider(InstanceProfileCredentialsProvider.create())
                     .build();
 
             this.s3Presigner = S3Presigner.builder()
                     .region(awsRegion)
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                    .credentialsProvider(InstanceProfileCredentialsProvider.create())
                     .build();
 
-            log.info("S3 클라이언트 초기화 완료 - region: {}, bucket: {}", region, bucketName);
+            log.info("S3 클라이언트 초기화 완료 (IAM Role 사용) - region: {}, bucket: {}, prefix: {}", 
+                region, bucketName, bucketPrefix);
         } catch (Exception e) {
             log.error("S3 클라이언트 초기화 실패: {}", e.getMessage(), e);
             throw new RuntimeException("S3 클라이언트 초기화에 실패했습니다.", e);
@@ -81,25 +78,40 @@ public class S3Service {
     }
 
     /**
+     * 버킷 prefix를 포함한 전체 키 생성
+     */
+    private String getFullKey(String key) {
+        if (bucketPrefix == null || bucketPrefix.isEmpty()) {
+            return key;
+        }
+        // prefix가 /로 끝나지 않으면 추가
+        String prefix = bucketPrefix.endsWith("/") ? bucketPrefix : bucketPrefix + "/";
+        return prefix + key;
+    }
+
+
+/**
      * S3Client Bean 등록 - S3CleanupService 등에서 사용
      */
+
     @Bean
     public S3Client s3Client() {
         if (this.s3Client == null) {
-            AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
             Region awsRegion = Region.of(region);
 
+            // EC2 IAM Role을 통한 자동 인증
             this.s3Client = S3Client.builder()
                     .region(awsRegion)
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                    .credentialsProvider(InstanceProfileCredentialsProvider.create())
                     .build();
         }
         return this.s3Client;
     }
 
-    /**
+/**
      * 배너 이미지 업로드 후 16:9 비율로 크롭 처리
      */
+
     public String processBannerImageTo16x9(String originalS3Url) {
         try {
             log.info("배너 이미지 16:9 비율 처리 시작: {}", originalS3Url);
@@ -152,7 +164,8 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * S3 URL에서 객체 키 추출
      */
     private String extractObjectKeyFromUrl(String s3Url) {
@@ -178,18 +191,22 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * 배너 파일명 생성
      */
+
     private String generateBannerFileName(String extension) {
         String uuid = UUID.randomUUID().toString();
         String timestamp = String.valueOf(System.currentTimeMillis());
         return String.format("banner_%s_%s.%s", timestamp, uuid.substring(0, 8), extension);
     }
 
-    /**
+
+/**
      * S3 URL에서 이미지 삭제
      */
+
     private void deleteImageFromUrl(String s3Url) {
         try {
             String key = extractObjectKeyFromUrl(s3Url);
@@ -206,19 +223,21 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * 배너 이미지 업로드용 presigned URL 생성
      *
      * @param fileExtension 파일 확장자 (jpg, png 등)
      * @return presigned URL과 파일 키가 포함된 정보
      */
+
     public PresignedUrlResponse generateBannerPresignedUrl(String fileExtension) {
         try {
             // 고유한 파일명 생성
             String uuid = UUID.randomUUID().toString();
             String timestamp = String.valueOf(System.currentTimeMillis());
             String fileName = String.format("%s-%s.%s", timestamp, uuid, fileExtension);
-            String objectKey = bannerPrefix + fileName;
+            String objectKey = getFullKey(bannerPrefix + fileName);
 
             log.info("배너 이미지 presigned URL 생성 시작 - objectKey: {}", objectKey);
 
@@ -253,7 +272,8 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * Kokpost 이미지 업로드용 presigned URL 생성
      *
      * @param fileExtension 파일 확장자 (jpg, png 등)
@@ -265,7 +285,7 @@ public class S3Service {
             String uuid = UUID.randomUUID().toString();
             String timestamp = String.valueOf(System.currentTimeMillis());
             String fileName = String.format("%s-%s.%s", timestamp, uuid, fileExtension);
-            String objectKey = "kokpost/" + fileName;
+            String objectKey = getFullKey("kokpost/" + fileName);
 
             log.info("Kokpost 이미지 presigned URL 생성 시작 - objectKey: {}", objectKey);
 
@@ -300,25 +320,29 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * 일반 이미지 업로드용 presigned URL 생성
      *
      * @param fileExtension 파일 확장자
      * @param folder 폴더 경로 (optional)
      * @return presigned URL 정보
      */
+
     public PresignedUrlResponse generatePresignedUrl(String fileExtension, String folder) {
         try {
             String uuid = UUID.randomUUID().toString();
             String timestamp = String.valueOf(System.currentTimeMillis());
             String fileName = String.format("%s-%s.%s", timestamp, uuid, fileExtension);
 
-            String objectKey;
+            String relativePath;
             if (folder != null && !folder.isEmpty()) {
-                objectKey = folder.endsWith("/") ? folder + fileName : folder + "/" + fileName;
+                relativePath = folder.endsWith("/") ? folder + fileName : folder + "/" + fileName;
             } else {
-                objectKey = "uploads/" + fileName;
+                relativePath = "uploads/" + fileName;
             }
+            
+            String objectKey = getFullKey(relativePath);
 
             log.info("일반 이미지 presigned URL 생성 시작 - objectKey: {}", objectKey);
 
@@ -350,12 +374,14 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * GET 작업용 presigned URL 생성
      *
      * @param objectKey S3 객체 키
      * @return GET용 presigned URL
      */
+
     public String generateGetPresignedUrl(String objectKey) {
         try {
             var getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
@@ -376,22 +402,26 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * S3 객체 URL 생성
      *
      * @param objectKey S3 객체 키
      * @return 공개 접근 가능한 URL
      */
+
     public String getObjectUrl(String objectKey) {
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, objectKey);
     }
 
-    /**
+
+/**
      * 파일 확장자에 따른 Content-Type 결정
      *
      * @param fileExtension 파일 확장자
      * @return Content-Type
      */
+
     private String determineContentType(String fileExtension) {
         if (fileExtension == null) {
             return "application/octet-stream";
@@ -408,12 +438,14 @@ public class S3Service {
         };
     }
 
-    /**
+
+/**
      * S3 객체 존재 여부 확인
      *
      * @param objectKey 확인할 객체 키
      * @return 존재 여부
      */
+
     public boolean doesObjectExist(String objectKey) {
         try {
             s3Client.headObject(builder -> builder.bucket(bucketName).key(objectKey));
@@ -424,12 +456,14 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * S3 객체 정보 조회
      *
      * @param objectKey 조회할 객체 키
      * @return 객체 정보
      */
+
     public String getObjectInfo(String objectKey) {
         try {
             var response = s3Client.headObject(builder -> builder.bucket(bucketName).key(objectKey));
@@ -441,11 +475,13 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * S3 객체 삭제
      *
      * @param objectKey 삭제할 객체 키
      */
+
     public void deleteObject(String objectKey) {
         try {
             s3Client.deleteObject(builder -> builder.bucket(bucketName).key(objectKey));
@@ -456,9 +492,11 @@ public class S3Service {
         }
     }
 
-    /**
+
+/**
      * Presigned URL 응답 DTO
      */
+
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
@@ -472,7 +510,7 @@ public class S3Service {
         public String getPublicUrl() {
             if (this.publicUrl == null && this.objectKey != null) {
                 return String.format("https://%s.s3.ap-northeast-2.amazonaws.com/%s",
-                    "ckokservice", this.objectKey);
+                    "kok-main-service-bucket", this.objectKey);
             }
             return this.publicUrl;
         }
