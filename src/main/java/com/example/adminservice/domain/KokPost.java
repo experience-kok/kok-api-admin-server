@@ -47,8 +47,9 @@ public class KokPost {
     /**
      * 캠페인 ID (어떤 캠페인의 글인지 확인용도)
      * Campaign 엔티티와 N:1 관계 (Campaign 1개 - KokPost 여러개)
+     * null 허용 - 임시 저장이나 캠페인 없이 작성 가능
      */
-    @Column(nullable = false, name = "campaign_id")
+    @Column(name = "campaign_id")
     private Long campaignId;
 
     /**
@@ -56,6 +57,12 @@ public class KokPost {
      */
     @Column(nullable = false, name = "author_id")
     private Long authorId;
+
+    /**
+     * 활성 여부 (캠페인 삭제 되면 자동 비활성화)
+     */
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean active = true;
 
     /**
      * 작성자 이름
@@ -85,7 +92,7 @@ public class KokPost {
 
     @Builder
     public KokPost(String title, String content, Long campaignId, Long authorId,
-                   String authorName, KokPostVisitInfo visitInfo) {
+                   String authorName, KokPostVisitInfo visitInfo, Boolean active) {
         this.title = title;
         this.content = content;
         this.campaignId = campaignId;
@@ -93,9 +100,24 @@ public class KokPost {
         this.authorName = authorName;
         this.visitInfo = visitInfo;
         this.viewCount = 0L;
+        this.active = active != null ? active : true;  // null이면 기본값 true
     }
 
     // 비즈니스 로직 메서드들
+
+    /**
+     * 비활성화 (캠페인 삭제 시 호출)
+     */
+    public void deactivate() {
+        this.active = false;
+    }
+
+    /**
+     * 활성화 (재활성화 필요 시)
+     */
+    public void activate() {
+        this.active = true;
+    }
 
     /**
      * 포스트 내용 업데이트
@@ -107,6 +129,13 @@ public class KokPost {
         if (content != null) {
             this.content = content;
         }
+    }
+
+    /**
+     * 캠페인 ID 업데이트 (임시 저장 → 캠페인 연결 또는 캠페인 변경)
+     */
+    public void updateCampaignId(Long campaignId) {
+        this.campaignId = campaignId;
     }
 
     /**

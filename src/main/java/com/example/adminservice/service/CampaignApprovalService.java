@@ -40,6 +40,7 @@ public class CampaignApprovalService {
     private final CampaignLocationRepository campaignLocationRepository;
     private final ClientNotificationService clientNotificationService;
     private final SESService sesService;
+    private final KokPostService kokPostService;  // KokPostService 의존성 추가
 
     /**
      * 승인 대기 중인 캠페인 목록 조회
@@ -354,6 +355,16 @@ public class CampaignApprovalService {
             // 필요시 추가 검증 로직 (예: SUPER_ADMIN만 승인된 캠페인 삭제 가능)
         }
 
+        // 캠페인 관련 KokPost 비활성화 처리
+        try {
+            kokPostService.deactivateKokPostsByCampaignId(campaignId);
+            log.info("캠페인 관련 KokPost 비활성화 완료: campaignId={}", campaignId);
+        } catch (Exception e) {
+            log.error("캠페인 관련 KokPost 비활성화 실패: campaignId={}, error={}", 
+                    campaignId, e.getMessage(), e);
+            // 비활성화 실패해도 캠페인 삭제는 계속 진행
+        }
+
         // 캠페인 삭제 전 알림 전송
         try {
             clientNotificationService.sendCampaignDeletionNotification(
@@ -368,7 +379,7 @@ public class CampaignApprovalService {
                     campaign.getId(), e.getMessage(), e);
         }
 
-        // 캠페인 삭제 (CASCADE 설정으로 연관 데이터도 함께 삭제됨)
+        // 캠페인 삭제
         campaignRepository.delete(campaign);
         log.info("캠페인 삭제 완료: campaignId={}", campaignId);
     }

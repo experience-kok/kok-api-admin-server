@@ -34,6 +34,9 @@ public class KokPostDetailResponse {
     @Schema(description = "작성자 이름", example = "관리자")
     private String authorName;
 
+    @Schema(description = "활성 여부", example = "true")
+    private boolean active;
+
     @Schema(description = "방문 정보")
     private KokPostVisitInfoDto visitInfo;
 
@@ -54,6 +57,7 @@ public class KokPostDetailResponse {
                 .campaignId(kokPost.getCampaignId())
                 .authorId(kokPost.getAuthorId())
                 .authorName(kokPost.getAuthorName())
+                .active(kokPost.isActive())
                 .visitInfo(KokPostVisitInfoDto.from(kokPost.getVisitInfo()))
                 .createdAt(kokPost.getCreatedAt())
                 .updatedAt(kokPost.getUpdatedAt())

@@ -37,19 +37,23 @@ public class KokPostService {
      */
     @Transactional
     public KokPostDetailResponse createKokPost(KokPostCreateRequest request, Long authorId, String authorName) {
-        log.info("홍보용 콕포스트 생성 요청 - 제목: {}, 작성자: {}, 캠페인ID: {}", request.getTitle(), authorName, request.getCampaignId());
+        log.info("홍보용 콕포스트 생성 요청 - 제목: {}, 작성자: {}, 캠페인ID: {}, 활성: {}", 
+                request.getTitle(), authorName, request.getCampaignId(), request.getActive());
 
-        // 홍보 전략 관점: 캠페인 ID는 참조 정보로만 활용 (존재 여부 검증 안함)
-        // - 종료된 캠페인의 홍보 글도 작성 가능
-        // - 예정된 캠페인의 사전 홍보 글도 작성 가능  
-        // - 가상 시나리오 홍보 글도 작성 가능
+        // 활성화 상태일 때 campaignId 검증
+        request.validateCampaignIdForActive();
+
+        // 캠페인 ID가 제공된 경우에만 캠페인 존재 여부 로깅
         if (request.getCampaignId() != null) {
             boolean campaignExists = campaignRepository.existsById(request.getCampaignId());
             if (!campaignExists) {
-                log.info("참조된 캠페인이 존재하지 않습니다 - 캠페인ID: {} (홍보용 글이므로 진행)", request.getCampaignId());
+                log.info("참조된 캠페인이 존재하지 않습니다 - 캠페인ID: {} (홍보용 글이므로 진행)", 
+                        request.getCampaignId());
             } else {
                 log.info("기존 캠페인 연결 - 캠페인ID: {}", request.getCampaignId());
             }
+        } else {
+            log.info("캠페인 없이 작성 (비활성화 상태 임시 저장)");
         }
 
         KokPostVisitInfo visitInfo = request.getVisitInfo().toEntity();
@@ -61,30 +65,51 @@ public class KokPostService {
                 .authorId(authorId)
                 .authorName(authorName)
                 .visitInfo(visitInfo)
+                .active(request.getActive())  // 사용자가 선택한 active 상태
                 .build();
 
         KokPost savedKokPost = kokPostRepository.save(kokPost);
-        log.info("홍보용 체험콕 글 생성 완료 - ID: {}, 캠페인참조: {}", 
-                savedKokPost.getId(), request.getCampaignId());
+        
+        if (savedKokPost.isActive()) {
+            log.info("체험콕 글 생성 완료 (활성화) - ID: {}, 캠페인ID: {}", 
+                    savedKokPost.getId(), savedKokPost.getCampaignId());
+        } else {
+            log.info("체험콕 글 생성 완료 (비활성화) - ID: {}, 캠페인ID: {}", 
+                    savedKokPost.getId(), savedKokPost.getCampaignId());
+        }
 
         return KokPostDetailResponse.from(savedKokPost);
     }
 
     /**
-     * 콕포스트 전체 목록 조회 (정렬 옵션 포함)
+     * 콕포스트 전체 목록 조회 (정렬 옵션 포함, 활성 상태 필터링)
      */
-    public List<KokPostListResponse> getAllKokPosts(SortOption sortOption) {
-        log.info("콕포스트 전체 목록 조회 요청 - 정렬: {}", sortOption.getDescription());
+    public List<KokPostListResponse> getAllKokPosts(SortOption sortOption, Boolean active) {
+        log.info("콕포스트 전체 목록 조회 요청 - 정렬: {}, 활성 필터: {}", 
+                sortOption.getDescription(), active);
 
         List<KokPost> kokPosts;
         
-        switch (sortOption) {
-            case VIEW_COUNT_DESC -> kokPosts = kokPostRepository.findAll(sortOption.getSort());
-            case VIEW_COUNT_ASC -> kokPosts = kokPostRepository.findAll(sortOption.getSort());
-            default -> kokPosts = kokPostRepository.findAllByOrderByCreatedAtDesc();
+        if (active != null) {
+            // 활성 상태 필터링
+            if (sortOption == SortOption.VIEW_COUNT_DESC || sortOption == SortOption.VIEW_COUNT_ASC) {
+                kokPosts = kokPostRepository.findAllByActive(active, 
+                        PageRequest.of(0, Integer.MAX_VALUE, sortOption.getSort())).getContent();
+            } else {
+                kokPosts = kokPostRepository.findAllByActiveOrderByCreatedAtDesc(active);
+            }
+        } else {
+            // 필터링 없이 전체 조회
+            switch (sortOption) {
+                case VIEW_COUNT_DESC, VIEW_COUNT_ASC -> 
+                    kokPosts = kokPostRepository.findAll(sortOption.getSort());
+                default -> 
+                    kokPosts = kokPostRepository.findAllByOrderByCreatedAtDesc();
+            }
         }
         
-        log.info("콕포스트 목록 조회 완료 - 정렬: {}, 총 {}개", sortOption.getDescription(), kokPosts.size());
+        log.info("콕포스트 목록 조회 완료 - 정렬: {}, 활성 필터: {}, 총 {}개", 
+                sortOption.getDescription(), active, kokPosts.size());
         
         return kokPosts.stream()
                 .map(KokPostListResponse::from)
@@ -102,28 +127,35 @@ public class KokPostService {
     }
 
     /**
-     * 콕포스트 전체 목록 조회 (페이지네이션, 정렬 옵션 포함)
+     * 콕포스트 전체 목록 조회 (페이지네이션, 정렬 옵션 포함, 활성 상태 필터링)
      */
-    public PagedResponse<KokPostListResponse> getAllKokPosts(SortOption sortOption, Pageable pageable) {
-        log.info("콕포스트 전체 목록 조회 요청 (페이지네이션) - 정렬: {}, 페이지: {}, 크기: {}", 
-                sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize());
+    public PagedResponse<KokPostListResponse> getAllKokPosts(SortOption sortOption, Pageable pageable, Boolean active) {
+        log.info("콕포스트 전체 목록 조회 요청 (페이지네이션) - 정렬: {}, 페이지: {}, 크기: {}, 활성 필터: {}", 
+                sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize(), active);
 
         Sort sort = getSortFromOption(sortOption);
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        Page<KokPost> kokPostPage = kokPostRepository.findAll(sortedPageable);
         
-        log.info("콕포스트 목록 조회 완료 (페이지네이션) - 정렬: {}, 페이지: {}/{}, 총 {}개", 
-                sortOption.getDescription(), kokPostPage.getNumber() + 1, kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
+        Page<KokPost> kokPostPage;
+        if (active != null) {
+            kokPostPage = kokPostRepository.findAllByActive(active, sortedPageable);
+        } else {
+            kokPostPage = kokPostRepository.findAll(sortedPageable);
+        }
+        
+        log.info("콕포스트 목록 조회 완료 (페이지네이션) - 정렬: {}, 활성 필터: {}, 페이지: {}/{}, 총 {}개", 
+                sortOption.getDescription(), active, kokPostPage.getNumber() + 1, 
+                kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
         
         Page<KokPostListResponse> responsePage = kokPostPage.map(KokPostListResponse::from);
         return PagedResponse.from(responsePage);
     }
 
     /**
-     * 콕포스트 전체 목록 조회 (기본 정렬: 최신순)
+     * 콕포스트 전체 목록 조회 (기본 정렬: 최신순, 활성 상태만)
      */
     public List<KokPostListResponse> getAllKokPosts() {
-        return getAllKokPosts(SortOption.LATEST);
+        return getAllKokPosts(SortOption.LATEST, true);  // 기본값: 활성화된 것만
     }
 
     /**
@@ -140,7 +172,7 @@ public class KokPostService {
                 });
 
         // 조회수 증가
-        kokPostRepository.incrementViewCount(id);
+       //kokPostRepository.incrementViewCount(id);
 
         log.info("콕포스트 조회 완료 - ID: {}, 제목: {}", id, kokPost.getTitle());
 
@@ -169,6 +201,14 @@ public class KokPostService {
 
         // 내용 업데이트
         kokPost.updateContent(request.getTitle(), request.getContent());
+
+        // 캠페인 ID 업데이트 (명시적으로 포함된 경우에만)
+        if (request.getCampaignId() != null) {
+            Long oldCampaignId = kokPost.getCampaignId();
+            kokPost.updateCampaignId(request.getCampaignId());
+            log.info("캠페인 ID 변경 - KokPost ID: {}, 이전: {}, 변경: {}", 
+                    id, oldCampaignId, request.getCampaignId());
+        }
 
         // 방문 정보 업데이트
         if (request.getVisitInfo() != null) {
@@ -208,15 +248,21 @@ public class KokPostService {
     }
 
     /**
-     * 제목으로 콕포스트 검색 (정렬 옵션 포함)
+     * 제목으로 콕포스트 검색 (정렬 옵션 포함, 활성 상태 필터링)
      */
-    public List<KokPostListResponse> searchKokPostsByTitle(String title, SortOption sortOption) {
-        log.info("콕포스트 제목 검색 요청 - 키워드: {}, 정렬: {}", title, sortOption.getDescription());
+    public List<KokPostListResponse> searchKokPostsByTitle(String title, SortOption sortOption, Boolean active) {
+        log.info("콕포스트 제목 검색 요청 - 키워드: {}, 정렬: {}, 활성 필터: {}", 
+                title, sortOption.getDescription(), active);
 
-        List<KokPost> kokPosts = kokPostRepository.findByTitleContainingIgnoreCase(title, sortOption.getSort());
+        List<KokPost> kokPosts;
+        if (active != null) {
+            kokPosts = kokPostRepository.findByActiveAndTitleContainingIgnoreCase(active, title, sortOption.getSort());
+        } else {
+            kokPosts = kokPostRepository.findByTitleContainingIgnoreCase(title, sortOption.getSort());
+        }
 
-        log.info("콕포스트 검색 완료 - 키워드: {}, 정렬: {}, 결과: {}개",
-                title, sortOption.getDescription(), kokPosts.size());
+        log.info("콕포스트 검색 완료 - 키워드: {}, 정렬: {}, 활성 필터: {}, 결과: {}개",
+                title, sortOption.getDescription(), active, kokPosts.size());
 
         return kokPosts.stream()
                 .map(KokPostListResponse::from)
@@ -224,42 +270,148 @@ public class KokPostService {
     }
 
     /**
-     * 제목으로 콕포스트 검색 (페이지네이션, 정렬 옵션 포함)
+     * 제목으로 콕포스트 검색 (페이지네이션, 정렬 옵션 포함, 활성 상태 필터링)
      */
-    public PagedResponse<KokPostListResponse> searchKokPostsByTitle(String title, SortOption sortOption, Pageable pageable) {
-        log.info("콕포스트 제목 검색 요청 (페이지네이션) - 키워드: {}, 정렬: {}, 페이지: {}, 크기: {}", 
-                title, sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize());
+    public PagedResponse<KokPostListResponse> searchKokPostsByTitle(String title, SortOption sortOption, Pageable pageable, Boolean active) {
+        log.info("콕포스트 제목 검색 요청 (페이지네이션) - 키워드: {}, 정렬: {}, 페이지: {}, 크기: {}, 활성 필터: {}", 
+                title, sortOption.getDescription(), pageable.getPageNumber(), pageable.getPageSize(), active);
 
         Sort sort = getSortFromOption(sortOption);
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        Page<KokPost> kokPostPage = kokPostRepository.findByTitleContainingIgnoreCase(title, sortedPageable);
+        
+        Page<KokPost> kokPostPage;
+        if (active != null) {
+            kokPostPage = kokPostRepository.findByActiveAndTitleContainingIgnoreCase(active, title, sortedPageable);
+        } else {
+            kokPostPage = kokPostRepository.findByTitleContainingIgnoreCase(title, sortedPageable);
+        }
 
-        log.info("콕포스트 검색 완료 (페이지네이션) - 키워드: {}, 정렬: {}, 페이지: {}/{}, 총 {}개",
-                title, sortOption.getDescription(), kokPostPage.getNumber() + 1, kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
+        log.info("콕포스트 검색 완료 (페이지네이션) - 키워드: {}, 정렬: {}, 활성 필터: {}, 페이지: {}/{}, 총 {}개",
+                title, sortOption.getDescription(), active, kokPostPage.getNumber() + 1, 
+                kokPostPage.getTotalPages(), kokPostPage.getTotalElements());
 
         Page<KokPostListResponse> responsePage = kokPostPage.map(KokPostListResponse::from);
         return PagedResponse.from(responsePage);
     }
 
     /**
-     * 제목으로 콕포스트 검색 (기본 정렬: 최신순)
+     * 제목으로 콕포스트 검색 (기본 정렬: 최신순, 활성화된 것만)
      */
     public List<KokPostListResponse> searchKokPostsByTitle(String title) {
-        return searchKokPostsByTitle(title, SortOption.LATEST);
+        return searchKokPostsByTitle(title, SortOption.LATEST, true);
     }
 
     /**
-     * 인기 콕포스트 조회 (조회수 순)
+     * 인기 콕포스트 조회 (조회수 순, 활성 상태 필터링)
      */
-    public List<KokPostListResponse> getPopularKokPosts() {
-        log.info("인기 콕포스트 조회 요청");
+    public List<KokPostListResponse> getPopularKokPosts(Boolean active) {
+        log.info("인기 콕포스트 조회 요청 - 활성 필터: {}", active);
 
-        List<KokPost> kokPosts = kokPostRepository.findTop10ByOrderByViewCountDesc();
+        List<KokPost> kokPosts;
+        if (active != null) {
+            kokPosts = kokPostRepository.findTop10ByActiveOrderByViewCountDesc(active);
+        } else {
+            kokPosts = kokPostRepository.findTop10ByOrderByViewCountDesc();
+        }
 
-        log.info("인기 콕포스트 조회 완료 - 총 {}개", kokPosts.size());
+        log.info("인기 콕포스트 조회 완료 - 활성 필터: {}, 총 {}개", active, kokPosts.size());
 
         return kokPosts.stream()
                 .map(KokPostListResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 인기 콕포스트 조회 (활성화된 것만, 기본값)
+     */
+    public List<KokPostListResponse> getPopularKokPosts() {
+        return getPopularKokPosts(true);
+    }
+
+    /**
+     * 캠페인 ID로 KokPost 비활성화 처리
+     */
+    @Transactional
+    public void deactivateKokPostsByCampaignId(Long campaignId) {
+        log.info("캠페인 삭제로 인한 KokPost 비활성화 처리 시작 - 캠페인ID: {}", campaignId);
+        
+        List<KokPost> kokPosts = kokPostRepository.findAllByCampaignId(campaignId);
+        
+        if (kokPosts.isEmpty()) {
+            log.info("비활성화할 KokPost가 없습니다 - 캠페인ID: {}", campaignId);
+            return;
+        }
+        
+        kokPosts.forEach(KokPost::deactivate);
+        kokPostRepository.saveAll(kokPosts);
+        
+        log.info("캠페인 관련 KokPost 비활성화 완료 - 캠페인ID: {}, 처리된 글 수: {}", 
+                campaignId, kokPosts.size());
+    }
+
+    /**
+     * 콕포스트 비활성화 (작성자 권한 또는 ADMIN 권한 검증)
+     */
+    @Transactional
+    public void deactivateKokPost(Long id, Long requestUserId, UserRole userRole) {
+        log.info("콕포스트 비활성화 요청 - ID: {}, 요청자: {}, 권한: {}", id, requestUserId, userRole);
+
+        KokPost kokPost = kokPostRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("비활성화할 콕포스트를 찾을 수 없습니다 - ID: {}", id);
+                    return new IllegalArgumentException("콕포스트를 찾을 수 없습니다. ID: " + id);
+                });
+
+        // 권한 검증: 작성자이거나 ADMIN이면 비활성화 가능
+        if (!kokPost.getAuthorId().equals(requestUserId) && userRole != UserRole.ADMIN) {
+            log.error("콕포스트 비활성화 권한 없음 - ID: {}, 작성자: {}, 요청자: {}, 권한: {}",
+                    id, kokPost.getAuthorId(), requestUserId, userRole);
+            throw new IllegalArgumentException("이 콕포스트를 비활성화할 권한이 없습니다.");
+        }
+
+        // 이미 비활성화된 경우
+        if (!kokPost.isActive()) {
+            log.warn("이미 비활성화된 콕포스트 - ID: {}", id);
+            throw new IllegalStateException("이미 비활성화된 콕포스트입니다.");
+        }
+
+        kokPost.deactivate();
+        kokPostRepository.save(kokPost);
+        
+        log.info("콕포스트 비활성화 완료 - ID: {} ({}이 비활성화)", id,
+                userRole == UserRole.ADMIN ? "관리자" : "작성자");
+    }
+
+    /**
+     * 콕포스트 활성화 (작성자 권한 또는 ADMIN 권한 검증)
+     */
+    @Transactional
+    public void activateKokPost(Long id, Long requestUserId, UserRole userRole) {
+        log.info("콕포스트 활성화 요청 - ID: {}, 요청자: {}, 권한: {}", id, requestUserId, userRole);
+
+        KokPost kokPost = kokPostRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.error("활성화할 콕포스트를 찾을 수 없습니다 - ID: {}", id);
+                    return new IllegalArgumentException("콕포스트를 찾을 수 없습니다. ID: " + id);
+                });
+
+        // 권한 검증: 작성자이거나 ADMIN이면 활성화 가능
+        if (!kokPost.getAuthorId().equals(requestUserId) && userRole != UserRole.ADMIN) {
+            log.error("콕포스트 활성화 권한 없음 - ID: {}, 작성자: {}, 요청자: {}, 권한: {}",
+                    id, kokPost.getAuthorId(), requestUserId, userRole);
+            throw new IllegalArgumentException("이 콕포스트를 활성화할 권한이 없습니다.");
+        }
+
+        // 이미 활성화된 경우
+        if (kokPost.isActive()) {
+            log.warn("이미 활성화된 콕포스트 - ID: {}", id);
+            throw new IllegalStateException("이미 활성화된 콕포스트입니다.");
+        }
+
+        kokPost.activate();
+        kokPostRepository.save(kokPost);
+        
+        log.info("콕포스트 활성화 완료 - ID: {} ({}이 활성화)", id,
+                userRole == UserRole.ADMIN ? "관리자" : "작성자");
     }
 }

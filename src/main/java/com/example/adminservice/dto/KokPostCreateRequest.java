@@ -23,20 +23,34 @@ public class KokPostCreateRequest {
     @Schema(description = "글 내용", example = "이곳은 정말 맛있는 식당입니다...", required = true)
     private String content;
 
-    @NotNull(message = "캠페인 ID는 필수입니다")
     @Positive(message = "캠페인 ID는 양수여야 합니다")
-    @Schema(description = "캠페인 ID", example = "1", required = true)
+    @Schema(description = "캠페인 ID (활성화 상태일 때 필수)", example = "1", required = false)
     private Long campaignId;
+
+    @NotNull(message = "활성 여부는 필수입니다")
+    @Schema(description = "활성 여부 (true: 활성화, false: 비활성화) - 활성화 시 campaignId 필수", 
+            example = "true", required = true)
+    private Boolean active;
 
     @NotNull(message = "방문 정보는 필수입니다")
     @Valid
     @Schema(description = "방문 정보 (연락처는 필수, 나머지는 선택)", required = true)
     private KokPostVisitInfoDto visitInfo;
 
-    public KokPostCreateRequest(String title, String content, Long campaignId, KokPostVisitInfoDto visitInfo) {
+    public KokPostCreateRequest(String title, String content, Long campaignId, Boolean active, KokPostVisitInfoDto visitInfo) {
         this.title = title;
         this.content = content;
         this.campaignId = campaignId;
+        this.active = active;
         this.visitInfo = visitInfo;
+    }
+
+    /**
+     * 활성화 상태일 때 campaignId가 있는지 검증
+     */
+    public void validateCampaignIdForActive() {
+        if (Boolean.TRUE.equals(active) && campaignId == null) {
+            throw new IllegalArgumentException("활성화 상태로 생성하려면 캠페인 ID가 필요합니다.");
+        }
     }
 }

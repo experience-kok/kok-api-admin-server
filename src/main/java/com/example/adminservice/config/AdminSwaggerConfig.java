@@ -103,10 +103,10 @@ public class AdminSwaggerConfig {
             return Arrays.asList(
                 new Server()
                     .url("https://chkok.kr/admin-api")
-                    .description("🔒 운영 서버 (HTTPS, IP 제한 적용)"),
+                    .description("운영 서버 (HTTPS, IP 제한 적용)"),
                 new Server()
                     .url("https://admin.chkok.kr/admin-api")
-                    .description("🔒 관리자 서버 (HTTPS, IP 제한 적용)")
+                    .description("관리자 서버 (HTTPS, IP 제한 적용)")
             );
         } else {
             return Arrays.asList(
