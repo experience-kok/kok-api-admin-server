@@ -34,7 +34,6 @@ public class KokPost {
     /**
      * 글 내용
      */
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -150,5 +149,12 @@ public class KokPost {
      */
     public void increaseViewCount() {
         this.viewCount++;
+    }
+
+    /**
+     * 캠페인 참조 제거 (캠페인 삭제 시 호출)
+     */
+    public void removeCampaignReference() {
+        this.campaignId = null;
     }
 }

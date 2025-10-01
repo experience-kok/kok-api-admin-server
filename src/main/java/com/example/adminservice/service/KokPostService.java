@@ -11,6 +11,7 @@ import com.example.adminservice.dto.KokPostUpdateRequest;
 import com.example.adminservice.dto.PagedResponse;
 import com.example.adminservice.repository.CampaignRepository;
 import com.example.adminservice.repository.KokPostRepository;
+import com.example.adminservice.util.MarkdownConverter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ public class KokPostService {
 
     private final KokPostRepository kokPostRepository;
     private final CampaignRepository campaignRepository; // 참조 확인용 (선택사항)
+    private final MarkdownConverter markdownConverter; // Markdown → HTML 변환
 
     /**
      * 콕포스트 생성 (홍보 글 작성)
@@ -159,7 +161,7 @@ public class KokPostService {
     }
 
     /**
-     * 콕포스트 개별 조회 (조회수 증가)
+     * 콕포스트 개별 조회 (조회수 증가, Markdown → HTML 변환)
      */
     @Transactional
     public KokPostDetailResponse getKokPost(Long id) {
@@ -176,7 +178,10 @@ public class KokPostService {
 
         log.info("콕포스트 조회 완료 - ID: {}, 제목: {}", id, kokPost.getTitle());
 
-        return KokPostDetailResponse.from(kokPost);
+        // Markdown → HTML 변환
+        String htmlContent = markdownConverter.toHtml(kokPost.getContent());
+        
+        return KokPostDetailResponse.fromWithHtml(kokPost, htmlContent);
     }
 
     /**
@@ -329,23 +334,28 @@ public class KokPostService {
     }
 
     /**
-     * 캠페인 ID로 KokPost 비활성화 처리
+     * 캠페인 ID로 KokPost 비활성화 처리 및 참조 제거
+     * (캠페인 삭제 시 외래키 제약 조건 위반을 방지하기 위해 campaign_id를 NULL로 설정)
      */
     @Transactional
     public void deactivateKokPostsByCampaignId(Long campaignId) {
-        log.info("캠페인 삭제로 인한 KokPost 비활성화 처리 시작 - 캠페인ID: {}", campaignId);
+        log.info("캠페인 삭제로 인한 KokPost 비활성화 및 참조 제거 시작 - 캠페인ID: {}", campaignId);
         
         List<KokPost> kokPosts = kokPostRepository.findAllByCampaignId(campaignId);
         
         if (kokPosts.isEmpty()) {
-            log.info("비활성화할 KokPost가 없습니다 - 캠페인ID: {}", campaignId);
+            log.info("처리할 KokPost가 없습니다 - 캠페인ID: {}", campaignId);
             return;
         }
         
-        kokPosts.forEach(KokPost::deactivate);
+        // 비활성화 처리 + 캠페인 참조 제거 (campaign_id를 NULL로 설정)
+        kokPosts.forEach(kokPost -> {
+            kokPost.deactivate();
+            kokPost.removeCampaignReference(); // 외래키 제약 조건 위반 방지
+        });
         kokPostRepository.saveAll(kokPosts);
         
-        log.info("캠페인 관련 KokPost 비활성화 완료 - 캠페인ID: {}, 처리된 글 수: {}", 
+        log.info("캠페인 관련 KokPost 비활성화 및 참조 제거 완료 - 캠페인ID: {}, 처리된 글 수: {}", 
                 campaignId, kokPosts.size());
     }
 

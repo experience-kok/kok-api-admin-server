@@ -63,4 +63,23 @@ public class KokPostDetailResponse {
                 .updatedAt(kokPost.getUpdatedAt())
                 .build();
     }
+    
+    /**
+     * Markdown → HTML 변환된 content로 응답 생성
+     */
+    public static KokPostDetailResponse fromWithHtml(KokPost kokPost, String htmlContent) {
+        return KokPostDetailResponse.builder()
+                .id(kokPost.getId())
+                .title(kokPost.getTitle())
+                .content(htmlContent)  // HTML로 변환된 내용
+                .viewCount(kokPost.getViewCount())
+                .campaignId(kokPost.getCampaignId())
+                .authorId(kokPost.getAuthorId())
+                .authorName(kokPost.getAuthorName())
+                .active(kokPost.isActive())
+                .visitInfo(KokPostVisitInfoDto.from(kokPost.getVisitInfo()))
+                .createdAt(kokPost.getCreatedAt())
+                .updatedAt(kokPost.getUpdatedAt())
+                .build();
+    }
 }
