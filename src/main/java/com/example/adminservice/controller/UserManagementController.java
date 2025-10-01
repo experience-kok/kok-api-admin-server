@@ -384,12 +384,7 @@ public class UserManagementController {
 
             userRepository.delete(user);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("userId", userId);
-            response.put("email", user.getEmail());
-            response.put("deleted", true);
-
-            return ResponseEntity.ok(BaseResponse.success(response, "사용자가 성공적으로 삭제되었습니다."));
+            return ResponseEntity.ok(BaseResponse.success(null, "사용자가 성공적으로 삭제되었습니다."));
         } catch (Exception e) {
             log.error("사용자 삭제 중 오류: {}", e.getMessage(), e);
             return ResponseEntity.ok(BaseResponse.fail("사용자 삭제 실패: " + e.getMessage(), "USER_DELETE_ERROR", 500));
