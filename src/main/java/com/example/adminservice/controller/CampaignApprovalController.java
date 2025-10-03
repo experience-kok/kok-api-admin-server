@@ -1,13 +1,10 @@
 package com.example.adminservice.controller;
 
 import com.example.adminservice.common.BaseResponse;
-import com.example.adminservice.dto.CampaignApprovalRequest;
-import com.example.adminservice.dto.CampaignApprovalResponse;
-import com.example.adminservice.dto.PendingCampaignResponse;
-import com.example.adminservice.dto.SimpleCampaignResponse;
-import com.example.adminservice.dto.CampaignApplicantListResponse;
+import com.example.adminservice.dto.*;
 import com.example.adminservice.service.CampaignApprovalService;
 import com.example.adminservice.service.CampaignApplicantService;
+import com.example.adminservice.service.CampaignService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,11 +33,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/campaigns")
 @RequiredArgsConstructor
-@Tag(name = "캠페인 승인 관리", description = "관리자가 캠페인을 승인/거절하는 API")
+@Tag(name = "캠페인 관리", description = "관리자가 캠페인을 관리하는 API")
 public class CampaignApprovalController {
 
     private final CampaignApprovalService campaignApprovalService;
     private final CampaignApplicantService campaignApplicantService;
+    private final CampaignService campaignService;
 
     @Operation(
             summary = "승인 대기 캠페인 목록 조회",
@@ -889,6 +889,54 @@ public class CampaignApprovalController {
             ));
         }
     }
+    /**
+     * 캠페인 목록 조회 (ID, Title 포함)
+     *
+     * @return 캠페인 목록
+     */
+    @GetMapping("/list")
+    @Operation(
+            summary = "캠페인 목록 조회",
+            description = "모든 캠페인의 ID와 제목을 포함한 간단한 정보를 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "캠페인 목록 조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ShortCampaignResponse.class),
+                            examples = @ExampleObject(
+                                    name = "성공 응답 예시",
+                                    value = """
+                                {
+                                  "success": true,
+                                  "message": "캠페인 목록을 성공적으로 조회했습니다.",
+                                  "status": 200,
+                                  "data": [
+                                    {
+                                      "id": 1,
+                                      "title": "신제품 운동화 리뷰 캠페인"
+                                    },
+                                    {
+                                      "id": 2,
+                                      "title": "화장품 방문형 체험 캠페인"
+                                    }
+                                  ]
+                                }
+                                """
+                            )
+                    )
+            )
+    })
+    public ResponseEntity<BaseResponse.Success<List<ShortCampaignResponse>>> getCampaigns() {
+        log.info("캠페인 목록 조회 API 호출");
 
+        List<ShortCampaignResponse> campaigns = campaignService.getAllCampaigns();
+
+        return ResponseEntity.ok(
+                BaseResponse.success(campaigns, "캠페인 목록을 성공적으로 조회했습니다.")
+        );
+    }
 
 }
