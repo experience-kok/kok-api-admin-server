@@ -1,6 +1,7 @@
 package com.example.adminservice.service;
 
 import com.example.adminservice.domain.Campaign;
+import com.example.adminservice.domain.CampaignCategory;
 import com.example.adminservice.dto.ShortCampaignResponse;
 import com.example.adminservice.dto.SimpleCampaignResponse;
 import com.example.adminservice.repository.CampaignRepository;
@@ -26,7 +27,7 @@ public class CampaignService {
     /**
      * 모든 캠페인 목록 조회 (ID와 제목만)
      *
-     * @return 캠페인 목록 (ID, Title)
+     * @return 캠페인 목록 (ID, Title, Category)
      */
     public List<ShortCampaignResponse> getAllCampaigns() {
         log.info("모든 캠페인 목록 조회 시작");
@@ -42,15 +43,25 @@ public class CampaignService {
     }
 
     /**
-     * Campaign 엔티티를 SimpleCampaignResponse로 변환
+     * Campaign 엔티티를 ShortCampaignResponse로 변환
      *
      * @param campaign 캠페인 엔티티
-     * @return SimpleCampaignResponse DTO
+     * @return ShortCampaignResponse DTO
      */
     private ShortCampaignResponse convertToSimpleResponse(Campaign campaign) {
-        return ShortCampaignResponse.builder()
+        ShortCampaignResponse.ShortCampaignResponseBuilder builder = ShortCampaignResponse.builder()
                 .id(campaign.getId())
-                .title(campaign.getTitle())
-                .build();
+                .title(campaign.getTitle());
+
+        // 카테고리 정보 추가
+        if (campaign.getCategory() != null) {
+            CampaignCategory category = campaign.getCategory();
+            builder.category(ShortCampaignResponse.CategoryDTO.builder()
+                    .type(category.getType())
+                    .name(category.getName())
+                    .build());
+        }
+
+        return builder.build();
     }
 }
