@@ -916,11 +916,19 @@ public class CampaignApprovalController {
                                   "data": [
                                     {
                                       "id": 1,
-                                      "title": "신제품 운동화 리뷰 캠페인"
+                                      "title": "신제품 운동화 리뷰 캠페인",
+                                      "category": {
+                                        "type": "배송",
+                                        "name": "패션/잡화"
+                                      }
                                     },
                                     {
                                       "id": 2,
-                                      "title": "화장품 방문형 체험 캠페인"
+                                      "title": "화장품 방문형 체험 캠페인",
+                                      "category": {
+                                        "type": "방문",
+                                        "name": "기타"
+                                      }
                                     }
                                   ]
                                 }
