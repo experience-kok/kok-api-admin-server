@@ -496,10 +496,9 @@ public class CampaignApprovalController {
                                             "approvalStatus": "승인됨",
                                             "approvalComment": "제품 정보가 상세하고 일정이 적절하여 승인합니다",
                                             "approvalDate": "2025-07-14T14:20:00",
-                                            "approver": {
-                                              "id": 2,
-                                              "nickname": "김관리자",
-                                              "email": "admin@example.com"
+                                            "category": {
+                                              "type": "방문",
+                                              "name": "카페"
                                             }
                                           }
                                         ],
@@ -916,19 +915,11 @@ public class CampaignApprovalController {
                                   "data": [
                                     {
                                       "id": 1,
-                                      "title": "신제품 운동화 리뷰 캠페인",
-                                      "category": {
-                                        "type": "배송",
-                                        "name": "패션/잡화"
-                                      }
+                                      "title": "신제품 운동화 리뷰 캠페인"
                                     },
                                     {
                                       "id": 2,
-                                      "title": "화장품 방문형 체험 캠페인",
-                                      "category": {
-                                        "type": "방문",
-                                        "name": "기타"
-                                      }
+                                      "title": "화장품 방문형 체험 캠페인"
                                     }
                                   ]
                                 }

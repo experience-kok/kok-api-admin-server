@@ -53,15 +53,6 @@ public class CampaignService {
                 .id(campaign.getId())
                 .title(campaign.getTitle());
 
-        // 카테고리 정보 추가
-        if (campaign.getCategory() != null) {
-            CampaignCategory category = campaign.getCategory();
-            builder.category(ShortCampaignResponse.CategoryDTO.builder()
-                    .type(category.getType())
-                    .name(category.getName())
-                    .build());
-        }
-
         return builder.build();
     }
 }

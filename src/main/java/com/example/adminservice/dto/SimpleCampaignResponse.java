@@ -54,4 +54,20 @@ public class SimpleCampaignResponse {
 
     @Schema(description = "승인 처리 일시", example = "2025-07-14T14:20:00")
     private LocalDateTime approvalDate;
+
+    @Schema(description = "캠페인 카테고리 정보")
+    private CategoryDTO category;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "카테고리 정보")
+    public static class CategoryDTO {
+        @Schema(description = "카테고리 타입", example = "방문")
+        private String type;
+
+        @Schema(description = "카테고리 이름", example = "기타")
+        private String name;
+    }
 }

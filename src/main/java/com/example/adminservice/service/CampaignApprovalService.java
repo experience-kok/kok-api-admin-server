@@ -318,6 +318,7 @@ public class CampaignApprovalService {
                             .approvalStatus("만료됨")
                             .approvalComment(response.getApprovalComment())
                             .approvalDate(response.getApprovalDate())
+                            .category(response.getCategory())  // 카테고리 정보 추가
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -456,6 +457,16 @@ public class CampaignApprovalService {
      * Campaign 엔티티를 SimpleCampaignResponse DTO로 변환
      */
     private SimpleCampaignResponse convertToSimpleCampaignResponse(Campaign campaign) {
+        // 카테고리 정보 변환
+        SimpleCampaignResponse.CategoryDTO categoryDTO = null;
+        if (campaign.getCategory() != null) {
+            CampaignCategory category = campaign.getCategory();
+            categoryDTO = SimpleCampaignResponse.CategoryDTO.builder()
+                    .type(category.getType())
+                    .name(category.getName())
+                    .build();
+        }
+
         return SimpleCampaignResponse.builder()
                 .id(campaign.getId())
                 .title(campaign.getTitle())
@@ -469,6 +480,7 @@ public class CampaignApprovalService {
                 .approvalStatus(getApprovalStatusInKorean(campaign.getApprovalStatus())) // 한글 변환
                 .approvalComment(campaign.getApprovalComment())
                 .approvalDate(campaign.getApprovalDateAsLocalDateTime()) // 호환성 메서드 사용
+                .category(categoryDTO)
                 .build();
     }
 
