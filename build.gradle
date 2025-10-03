@@ -56,6 +56,9 @@ dependencies {
 	
 	// 이미지 처리 라이브러리 추가
 	implementation 'net.coobird:thumbnailator:0.4.19'
+	
+	// Markdown → HTML 변환
+	implementation 'org.commonmark:commonmark:0.21.0'
 }
 
 tasks.named('test') {
